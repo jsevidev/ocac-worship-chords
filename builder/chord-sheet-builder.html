@@ -222,19 +222,27 @@ function padRight(str, width){
   return str + ' '.repeat(Math.max(0, width - str.length));
 }
 
+function padCenter(str, width){
+  str = (str||'').toString();
+  if(str.length >= width) return str;
+  const pad = width - str.length;
+  const left = Math.floor(pad / 2);
+  return ' '.repeat(left) + str + ' '.repeat(pad - left);
+}
+
 function alignLine(pairs){
   const cleaned = pairs.filter(p => (p.beat||'').trim() !== '' || (p.chord||'').trim() !== '');
   if(cleaned.length === 0) return null;
   const beatCells = [], chordCells = [];
+  const sepChord = '  -  ';
+  const sepBeat  = '     '; // same 5-char width as sepChord
   cleaned.forEach(p=>{
     const beat = (p.beat||'').trim();
     const chord = (p.chord||'').trim();
     const width = Math.max(beat.length, chord.length, 1);
-    beatCells.push(padRight(beat, width));
+    beatCells.push(padCenter(beat, width));
     chordCells.push(padRight(chord, width));
   });
-  const sepChord = '  -  ';
-  const sepBeat  = '     '; // same length as sepChord, keeps columns aligned
   return {
     beats: beatCells.join(sepBeat).replace(/\s+$/,''),
     chords: chordCells.join(sepChord).replace(/\s+$/,'')

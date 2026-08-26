@@ -3,6 +3,9 @@
 Free, online, searchable version of the church chord notebooks. Built with Jekyll,
 hosted free on GitHub Pages.
 
+**Live site:** https://jsevidev.github.io/ocac-worship-chords/
+**Repo:** https://github.com/jsevidev/ocac-worship-chords
+
 ## Folder structure
 
 ```

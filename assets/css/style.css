@@ -133,7 +133,7 @@ main{
   margin: 0 0 20px;
 }
 .chord-block pre{
-  font-family: 'Courier New', Courier, monospace;
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
   font-size: 16px;
   line-height: 1.8;
   background: var(--white);
@@ -142,7 +142,66 @@ main{
   padding: 16px;
   overflow-x: auto;
   white-space: pre;
+  font-variant-numeric: tabular-nums;
+}
+
+.chord-section{
+  background: var(--white);
+  border: 1px solid var(--paper-rule);
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+.chord-section:last-child{ margin-bottom: 0; }
+.section-label{
+  font-family: Georgia, serif;
+  font-weight: 700;
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: var(--ink);
+}
+.chord-repeat{
+  font-family: Georgia, serif;
+  font-weight: 700;
+  font-size: 15px;
+  padding: 8px 16px;
+  color: var(--ink-soft);
+}
+.chord-row{
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0;
+  margin-bottom: 10px;
+  font-family: 'JetBrains Mono', 'Courier New', Courier, monospace;
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.chord-row:last-child{ margin-bottom: 0; }
+.chord-pair{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 2.5em;
+}
+.chord-pair .beat{
+  font-size: 14px;
+  color: var(--ink-soft);
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+.chord-pair .chord{
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.chord-sep{
+  align-self: flex-end;
+  padding: 0 10px 2px;
+  color: var(--ink-soft);
+  font-weight: 400;
 }
 @media (max-width: 480px){
-  .chord-block pre{ font-size: 15px; }
+  .chord-block pre,
+  .chord-row{ font-size: 15px; }
 }
