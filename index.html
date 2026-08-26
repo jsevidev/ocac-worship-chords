@@ -1,0 +1,42 @@
+---
+layout: default
+title: Song list
+---
+<details class="section-legend">
+  <summary>Section key</summary>
+  <dl class="legend-list">
+    {% for item in site.section_legend %}
+    <div class="legend-item">
+      <dt>{{ item.numeral }}</dt>
+      <dd>{{ item.name }}</dd>
+    </div>
+    {% endfor %}
+  </dl>
+  <p class="legend-note">A numeral alone (no chords below) means replay that section.</p>
+</details>
+
+<div class="search-wrap">
+  <input type="text" id="search" placeholder="Search song title" autocomplete="off">
+</div>
+
+<div id="song-list">
+{% assign songs_sorted = site.songs | sort: "notebook" %}
+{% assign notebooks = songs_sorted | map: "notebook" | uniq | sort %}
+{% for nb in notebooks %}
+  <div class="notebook-group">
+    <h2 class="notebook-heading">Notebook {{ nb }}</h2>
+    {% assign nb_songs = songs_sorted | where: "notebook", nb | sort: "title" %}
+    <ul class="song-index">
+      {% for song in nb_songs %}
+      <li class="song-row" data-title="{{ song.title | downcase }}">
+        <a href="{{ song.url | relative_url }}">{{ song.title }}</a>
+        <span class="page-num">p. {{ song.page }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+{% endfor %}
+</div>
+<p id="no-results" style="display:none;">No songs match your search.</p>
+
+<script src="{{ '/assets/js/search.js' | relative_url }}"></script>

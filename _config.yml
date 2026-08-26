@@ -1,0 +1,31 @@
+title: OCAC Worship Chords
+description: Chord sheets, digitized
+
+collections:
+  songs:
+    output: true
+    permalink: /songs/:slug/
+
+markdown: kramdown
+
+defaults:
+  - scope:
+      path: ""
+      type: songs
+    values:
+      layout: song
+
+# Roman numeral section labels (consistent across all songs)
+section_legend:
+  - { numeral: "I", name: "Intro" }
+  - { numeral: "II", name: "Verse" }
+  - { numeral: "III", name: "Chorus" }
+  - { numeral: "IV", name: "Bridge" }
+  - { numeral: "V", name: "Outro" }
+
+exclude:
+  - README.md
+  - Gemfile
+  - Gemfile.lock
+  - builder/
+  - docs/

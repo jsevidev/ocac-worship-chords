@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chord Sheet Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #FAF6EC;
+    --paper-rule: #E4DCC8;
+    --ink: #1E2A38;
+    --ink-soft: #56606E;
+    --brass: #A8823F;
+    --brass-soft: #EFE3C8;
+    --danger: #A84B3F;
+    --white: #FFFFFF;
+    --radius: 10px;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    padding: 32px 20px 80px;
+  }
+  .wrap{ max-width: 1100px; margin: 0 auto; }
+  header{ margin-bottom: 28px; }
+  header h1{
+    font-family: 'Lora', serif;
+    font-size: 28px;
+    font-weight: 700;
+    margin: 0 0 4px;
+  }
+  header p{
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 14px;
+  }
+  .legend-ref{ margin-top: 8px !important; font-size: 12px !important; }
+  .grid{
+    display: grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 860px){ .grid{ grid-template-columns: 1fr; } }
+
+  .card{
+    background: var(--white);
+    border: 1px solid var(--paper-rule);
+    border-radius: var(--radius);
+    padding: 20px;
+  }
+  .card + .card{ margin-top: 20px; }
+  .card h2{
+    font-family: 'Lora', serif;
+    font-size: 16px;
+    margin: 0 0 14px;
+    display:flex; align-items:center; justify-content: space-between;
+  }
+  label{
+    display:block;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 4px;
+  }
+  input[type=text], input[type=number]{
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--paper-rule);
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    background: var(--paper);
+    color: var(--ink);
+  }
+  input:focus{ outline: 2px solid var(--brass); outline-offset: 1px; }
+  .meta-row{ display:grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+
+  .section-block{
+    border: 1px solid var(--paper-rule);
+    border-radius: 8px;
+    padding: 14px;
+    margin-bottom: 14px;
+    background: #FDFBF5;
+  }
+  .section-head{ display:flex; gap:10px; align-items: flex-end; margin-bottom: 10px; }
+  .section-head .numeral{ width: 90px; flex: none; }
+  .checkbox-row{ display:flex; align-items:center; gap:6px; font-size:13px; color: var(--ink-soft); margin-bottom: 2px; }
+  .checkbox-row input{ width:auto; }
+
+  .pair-line{ display:flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--paper-rule); }
+  .pair{ display:flex; gap:4px; align-items:flex-end; }
+  .pair input{ width: 56px; text-align:center; }
+  .pair input.chord{ width: 68px; font-weight:600; }
+  .pair .lbl{ font-size:10px; color: var(--ink-soft); text-align:center; display:block; }
+
+  button{
+    font-family: 'Inter', sans-serif;
+    cursor:pointer;
+    border-radius: 6px;
+    border: 1px solid transparent;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 12px;
+  }
+  .btn-primary{ background: var(--ink); color: #fff; }
+  .btn-primary:hover{ background: #10181f; }
+  .btn-brass{ background: var(--brass); color: #fff; }
+  .btn-brass:hover{ background: #8f6e33; }
+  .btn-ghost{ background: transparent; color: var(--ink-soft); border-color: var(--paper-rule); }
+  .btn-ghost:hover{ background: var(--brass-soft); color: var(--ink); }
+  .btn-danger{ background: transparent; color: var(--danger); border-color: #E8D3CE; }
+  .btn-danger:hover{ background: #FBEEEC; }
+  .btn-sm{ padding: 4px 8px; font-size: 12px; }
+  .row-actions{ display:flex; gap:6px; margin-top: 2px; flex-wrap: wrap; }
+  .toolbar{ display:flex; gap:8px; flex-wrap: wrap; margin-top: 6px; }
+
+  pre.output{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    background: var(--ink);
+    color: #F3EFE2;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    white-space: pre;
+    margin: 0;
+  }
+  .output-actions{ display:flex; gap:8px; margin-top: 12px; }
+
+  .saved-list{ list-style:none; margin:0; padding:0; }
+  .saved-item{
+    display:flex; align-items:center; justify-content:space-between;
+    padding: 9px 4px; border-bottom: 1px solid var(--paper-rule);
+    font-size: 14px;
+  }
+  .saved-item:last-child{ border-bottom:none; }
+  .saved-item .meta{ color: var(--ink-soft); font-size: 12px; }
+  .empty-note{ color: var(--ink-soft); font-size: 13px; font-style: italic; }
+  .status{ font-size:12px; color: var(--brass); margin-left:10px; font-weight:600; height:14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Chord Sheet Builder</h1>
+    <p>Fill in beats and chords &mdash; alignment is handled for you. Save as you go, download when a song is ready.</p>
+    <p class="legend-ref">Sections: <strong>I</strong> Intro · <strong>II</strong> Verse · <strong>III</strong> Chorus · <strong>IV</strong> Bridge · <strong>V</strong> Outro</p>
+  </header>
+
+  <div class="grid">
+    <!-- LEFT: FORM -->
+    <div>
+      <div class="card">
+        <h2>Song details</h2>
+        <div class="meta-row">
+          <div>
+            <label for="f-title">Title</label>
+            <input type="text" id="f-title" placeholder="Amazing Grace">
+          </div>
+          <div>
+            <label for="f-notebook">Notebook #</label>
+            <input type="text" id="f-notebook" placeholder="1">
+          </div>
+          <div>
+            <label for="f-page">Page #</label>
+            <input type="text" id="f-page" placeholder="12">
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Sections <span id="section-status" class="status"></span></h2>
+        <div id="sections"></div>
+        <button class="btn-brass" id="add-section">+ Add section</button>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn-primary" id="save-song">Save song</button>
+        <button class="btn-ghost" id="new-song">New song</button>
+      </div>
+    </div>
+
+    <!-- RIGHT: PREVIEW + SAVED -->
+    <div>
+      <div class="card">
+        <h2>Preview (this is what gets saved)</h2>
+        <pre class="output" id="preview"></pre>
+        <div class="output-actions">
+          <button class="btn-ghost btn-sm" id="copy-output">Copy text</button>
+          <button class="btn-brass btn-sm" id="download-md">Download .md</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Saved songs</h2>
+        <ul class="saved-list" id="saved-list"></ul>
+        <p class="empty-note" id="saved-empty">Nothing saved yet.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let state = { id: null, title:'', notebook:'', page:'', sections: [] };
+
+function newSection(){
+  return { numeral: '', repeatOnly: false, lines: [ newLine() ] };
+}
+function newLine(){ return [ {beat:'', chord:''}, {beat:'', chord:''} ]; }
+
+function padRight(str, width){
+  str = (str||'').toString();
+  return str + ' '.repeat(Math.max(0, width - str.length));
+}
+
+function alignLine(pairs){
+  const cleaned = pairs.filter(p => (p.beat||'').trim() !== '' || (p.chord||'').trim() !== '');
+  if(cleaned.length === 0) return null;
+  const beatCells = [], chordCells = [];
+  cleaned.forEach(p=>{
+    const beat = (p.beat||'').trim();
+    const chord = (p.chord||'').trim();
+    const width = Math.max(beat.length, chord.length, 1);
+    beatCells.push(padRight(beat, width));
+    chordCells.push(padRight(chord, width));
+  });
+  const sepChord = '  -  ';
+  const sepBeat  = '     '; // same length as sepChord, keeps columns aligned
+  return {
+    beats: beatCells.join(sepBeat).replace(/\s+$/,''),
+    chords: chordCells.join(sepChord).replace(/\s+$/,'')
+  };
+}
+
+function buildOutput(){
+  const title = document.getElementById('f-title').value.trim() || 'Untitled Song';
+  const notebook = document.getElementById('f-notebook').value.trim();
+  const page = document.getElementById('f-page').value.trim();
+
+  const fm = `---\ntitle: "${title}"\nnotebook: ${notebook || '""'}\npage: ${page || '""'}\n---`;
+
+  const body = state.sections.map(sec=>{
+    const numeral = sec.numeral.trim() || '?';
+    if(sec.repeatOnly){ return numeral; }
+    const rendered = sec.lines.map(alignLine).filter(Boolean).map(l => `${l.beats}\n${l.chords}`);
+    if(rendered.length === 0) return numeral;
+    return `${numeral}\n${rendered.join('\n\n')}`;
+  }).join('\n\n');
+
+  return `${fm}\n\`\`\`\n${body}\n\`\`\``;
+}
+
+function renderPreview(){
+  document.getElementById('preview').textContent = buildOutput();
+}
+
+function renderSections(){
+  const container = document.getElementById('sections');
+  container.innerHTML = '';
+  state.sections.forEach((sec, i)=>{
+    const block = document.createElement('div');
+    block.className = 'section-block';
+
+    const head = document.createElement('div');
+    head.className = 'section-head';
+    head.innerHTML = `
+      <div class="numeral">
+        <label>Numeral</label>
+        <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="I">
+      </div>
+      <div style="flex:1">
+        <div class="checkbox-row">
+          <input type="checkbox" data-role="repeat" ${sec.repeatOnly ? 'checked' : ''}>
+          Repeat reference only (no chords, just replay this numeral)
+        </div>
+      </div>
+      <button class="btn-danger btn-sm" data-role="remove-section">Remove</button>
+    `;
+    block.appendChild(head);
+
+    if(!sec.repeatOnly){
+      const linesWrap = document.createElement('div');
+      linesWrap.dataset.role = 'lines';
+      sec.lines.forEach((line, j)=>{
+        linesWrap.appendChild(renderPairLine(i, j, line));
+      });
+      block.appendChild(linesWrap);
+
+      const addLineBtn = document.createElement('button');
+      addLineBtn.className = 'btn-ghost btn-sm';
+      addLineBtn.textContent = '+ Add line';
+      addLineBtn.dataset.role = 'add-line';
+      block.appendChild(addLineBtn);
+    }
+
+    container.appendChild(block);
+
+    // wire events for this block
+    head.querySelector('[data-role=numeral]').addEventListener('input', e=>{
+      sec.numeral = e.target.value; renderPreview();
+    });
+    head.querySelector('[data-role=repeat]').addEventListener('change', e=>{
+      sec.repeatOnly = e.target.checked; renderSections(); renderPreview();
+    });
+    head.querySelector('[data-role=remove-section]').addEventListener('click', ()=>{
+      state.sections.splice(i,1); renderSections(); renderPreview();
+    });
+    if(!sec.repeatOnly){
+      block.querySelector('[data-role=add-line]').addEventListener('click', ()=>{
+        sec.lines.push(newLine()); renderSections(); renderPreview();
+      });
+    }
+  });
+  renderPreview();
+}
+
+function renderPairLine(i, j, line){
+  const lineEl = document.createElement('div');
+  lineEl.className = 'pair-line';
+
+  line.forEach((pair, k)=>{
+    const pairEl = document.createElement('div');
+    pairEl.className = 'pair';
+    pairEl.innerHTML = `
+      <div>
+        <span class="lbl">Beats</span>
+        <input type="text" data-role="beat" value="${escapeAttr(pair.beat)}" placeholder="4">
+      </div>
+      <div>
+        <span class="lbl">Chord</span>
+        <input type="text" class="chord" data-role="chord" value="${escapeAttr(pair.chord)}" placeholder="G">
+      </div>
+      <button class="btn-danger btn-sm" data-role="remove-pair" title="Remove chord">&times;</button>
+    `;
+    pairEl.querySelector('[data-role=beat]').addEventListener('input', e=>{
+      pair.beat = e.target.value; renderPreview();
+    });
+    pairEl.querySelector('[data-role=chord]').addEventListener('input', e=>{
+      pair.chord = e.target.value; renderPreview();
+    });
+    pairEl.querySelector('[data-role=remove-pair]').addEventListener('click', ()=>{
+      line.splice(k,1); renderSections(); renderPreview();
+    });
+    lineEl.appendChild(pairEl);
+  });
+
+  const controls = document.createElement('div');
+  controls.className = 'row-actions';
+  const addPairBtn = document.createElement('button');
+  addPairBtn.className = 'btn-ghost btn-sm';
+  addPairBtn.textContent = '+ Chord';
+  addPairBtn.addEventListener('click', ()=>{
+    line.push({beat:'', chord:''}); renderSections(); renderPreview();
+  });
+  const removeLineBtn = document.createElement('button');
+  removeLineBtn.className = 'btn-ghost btn-sm';
+  removeLineBtn.textContent = 'Remove line';
+  removeLineBtn.addEventListener('click', ()=>{
+    state.sections[i].lines.splice(j,1);
+    if(state.sections[i].lines.length === 0) state.sections[i].lines.push(newLine());
+    renderSections(); renderPreview();
+  });
+  controls.appendChild(addPairBtn);
+  controls.appendChild(removeLineBtn);
+  lineEl.appendChild(controls);
+
+  return lineEl;
+}
+
+function escapeAttr(str){
+  return (str||'').replace(/"/g,'&quot;');
+}
+
+function slugify(title){
+  return (title||'untitled').toLowerCase().trim()
+    .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'untitled';
+}
+
+// ---- top-level field bindings ----
+['f-title','f-notebook','f-page'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', renderPreview);
+});
+
+document.getElementById('add-section').addEventListener('click', ()=>{
+  state.sections.push(newSection());
+  renderSections();
+});
+
+document.getElementById('new-song').addEventListener('click', ()=>{
+  state = { id: null, title:'', notebook:'', page:'', sections: [ newSection() ] };
+  document.getElementById('f-title').value = '';
+  document.getElementById('f-notebook').value = '';
+  document.getElementById('f-page').value = '';
+  renderSections();
+});
+
+document.getElementById('copy-output').addEventListener('click', async ()=>{
+  try{
+    await navigator.clipboard.writeText(buildOutput());
+    flashStatus('Copied');
+  }catch(e){ flashStatus('Copy failed'); }
+});
+
+document.getElementById('download-md').addEventListener('click', ()=>{
+  const title = document.getElementById('f-title').value.trim() || 'untitled';
+  const blob = new Blob([buildOutput()], {type:'text/markdown'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `${slugify(title)}.md`;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+});
+
+function flashStatus(msg){
+  const el = document.getElementById('section-status');
+  el.textContent = msg;
+  setTimeout(()=>{ el.textContent=''; }, 1500);
+}
+
+// ---- persistence (browser localStorage) ----
+const storage = {
+  async set(key, value){
+    localStorage.setItem(key, value);
+  },
+  async get(key){
+    const value = localStorage.getItem(key);
+    return value ? { value } : null;
+  },
+  async delete(key){
+    localStorage.removeItem(key);
+  },
+  async list(prefix){
+    const keys = [];
+    for(let i = 0; i < localStorage.length; i++){
+      const k = localStorage.key(i);
+      if(k && k.startsWith(prefix)) keys.push(k);
+    }
+    return { keys };
+  }
+};
+
+async function saveSong(){
+  state.title = document.getElementById('f-title').value.trim();
+  state.notebook = document.getElementById('f-notebook').value.trim();
+  state.page = document.getElementById('f-page').value.trim();
+  if(!state.title){ flashStatus('Add a title first'); return; }
+  if(!state.id){ state.id = 'song_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
+  try{
+    await storage.set('songs:' + state.id, JSON.stringify(state));
+    flashStatus('Saved');
+    await renderSavedList();
+  }catch(e){
+    flashStatus('Save failed');
+    console.error(e);
+  }
+}
+document.getElementById('save-song').addEventListener('click', saveSong);
+
+async function loadSong(id){
+  try{
+    const result = await storage.get('songs:' + id);
+    if(!result) return;
+    state = JSON.parse(result.value);
+    if(!state.sections || state.sections.length === 0) state.sections = [newSection()];
+    document.getElementById('f-title').value = state.title || '';
+    document.getElementById('f-notebook').value = state.notebook || '';
+    document.getElementById('f-page').value = state.page || '';
+    renderSections();
+    flashStatus('Loaded');
+  }catch(e){ flashStatus('Load failed'); console.error(e); }
+}
+
+async function deleteSong(id){
+  try{
+    const result = await storage.get('songs:' + id);
+    if(result) await storage.delete('songs:' + id);
+    await renderSavedList();
+    if(state.id === id){
+      state = { id:null, title:'', notebook:'', page:'', sections:[newSection()] };
+      document.getElementById('f-title').value = '';
+      document.getElementById('f-notebook').value = '';
+      document.getElementById('f-page').value = '';
+      renderSections();
+    }
+  }catch(e){ console.error(e); }
+}
+
+async function renderSavedList(){
+  const listEl = document.getElementById('saved-list');
+  const emptyEl = document.getElementById('saved-empty');
+  listEl.innerHTML = '';
+  try{
+    const listing = await storage.list('songs:');
+    const keys = (listing && listing.keys) ? listing.keys : [];
+    if(keys.length === 0){ emptyEl.style.display = 'block'; return; }
+    emptyEl.style.display = 'none';
+
+    const songs = [];
+    for(const key of keys){
+      try{
+        const r = await storage.get(key);
+        if(r) songs.push(JSON.parse(r.value));
+      }catch(e){ /* skip unreadable entry */ }
+    }
+    songs.sort((a,b)=> (a.title||'').localeCompare(b.title||''));
+
+    songs.forEach(song=>{
+      const li = document.createElement('li');
+      li.className = 'saved-item';
+      li.innerHTML = `
+        <div>
+          <div>${song.title || 'Untitled'}</div>
+          <div class="meta">Notebook ${song.notebook || '—'} · Page ${song.page || '—'}</div>
+        </div>
+        <div class="row-actions">
+          <button class="btn-ghost btn-sm" data-role="load">Load</button>
+          <button class="btn-danger btn-sm" data-role="delete">Delete</button>
+        </div>
+      `;
+      li.querySelector('[data-role=load]').addEventListener('click', ()=> loadSong(song.id));
+      li.querySelector('[data-role=delete]').addEventListener('click', ()=> {
+        if(confirm(`Delete "${song.title}"?`)) deleteSong(song.id);
+      });
+      listEl.appendChild(li);
+    });
+  }catch(e){
+    emptyEl.textContent = 'Could not load saved songs.';
+    emptyEl.style.display = 'block';
+    console.error(e);
+  }
+}
+
+// ---- init ----
+state.sections.push(newSection());
+renderSections();
+renderSavedList();
+</script>
+</body>
+</html>
