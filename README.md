@@ -10,8 +10,8 @@ hosted free on GitHub Pages.
 
 ```
 OCAC Chord Sheet/
-├── builder/                  private transcription tool (not deployed)
-│   └── chord-sheet-builder.html
+├── builder/                  transcription tool (live at /builder/)
+│   └── index.html
 ├── _config.yml               site settings
 ├── _layouts/                 page templates
 ├── _songs/                   one .md file per song
@@ -28,11 +28,11 @@ OCAC Chord Sheet/
 3. Wait a minute or two. Your site will be live at
    `https://<your-username>.github.io/<repo-name>/`.
 
-The `builder/` and `docs/` folders are excluded from the site build.
+The `docs/` folder is excluded from the site build.
 
 ## Adding a new song
 
-1. Open `builder/chord-sheet-builder.html` in your browser.
+1. Open the [Chord Sheet Builder](https://jsevidev.github.io/ocac-worship-chords/builder/) (also linked at the bottom of the homepage).
 2. Fill in the song and click **Download .md**.
 3. Drop that file into `_songs/`.
 4. Commit and push. The live site updates automatically within about a minute.

@@ -27,5 +27,4 @@ exclude:
   - README.md
   - Gemfile
   - Gemfile.lock
-  - builder/
   - docs/
