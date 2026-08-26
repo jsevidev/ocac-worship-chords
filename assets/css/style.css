@@ -149,42 +149,43 @@ main{
   background: var(--white);
   border: 1px solid var(--paper-rule);
   border-radius: 8px;
-  padding: 16px;
+  padding: 24px 20px;
+}
+.play-order{
+  text-align: center;
+  font-family: Georgia, serif;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--ink);
+  padding: 4px 8px 28px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--paper-rule);
+}
+.chord-sections{
+  padding-top: 8px;
 }
 .chord-part{
-  margin-bottom: 18px;
+  padding: 20px 4px;
+  margin-bottom: 8px;
+}
+.chord-part:not(:last-child){
+  border-bottom: 1px solid var(--paper-rule);
+  margin-bottom: 12px;
+  padding-bottom: 28px;
 }
 .chord-part:last-child{
   margin-bottom: 0;
+  padding-bottom: 4px;
 }
 .section-label{
   font-family: Georgia, serif;
   font-weight: 700;
   font-size: 14px;
-  margin-bottom: 10px;
+  margin-bottom: 14px;
   color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: .04em;
-}
-.repeat-marker{
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 14px 0;
-  color: var(--ink-soft);
-  font-size: 13px;
-}
-.repeat-marker::before,
-.repeat-marker::after{
-  content: '';
-  flex: 1;
-  border-top: 1px dashed var(--paper-rule);
-}
-.repeat-marker span{
-  font-family: Georgia, serif;
-  font-style: italic;
-  white-space: nowrap;
-  color: var(--brass);
 }
 .chord-row{
   display: flex;
