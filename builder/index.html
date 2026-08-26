@@ -415,7 +415,7 @@ permalink: /builder/
       <ul>
         <li><strong>Save draft</strong> &mdash; temporary backup in this browser while you transcribe. Won&rsquo;t appear on the site.</li>
         <li><strong>Save .md</strong> &mdash; the real song file for <strong>_songs/</strong>. Commit and push to publish on the site.</li>
-        <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>am/G</strong>, etc.).</li>
+        <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>Am/G</strong>, etc.).</li>
       </ul>
     </div>
     <p class="legend-ref">Sections: <strong>I</strong> Intro · <strong>II</strong> Verse · <strong>III</strong> Chorus · <strong>IV</strong> Bridge · <strong>V</strong> Outro</p>
@@ -1008,7 +1008,16 @@ function renderPairLine(i, j, line){
       pair.beat = e.target.value; renderPreview();
     });
     pairEl.querySelector('[data-role=chord]').addEventListener('input', e=>{
-      var formatted = formatChord(e.target.value, { preserveTrailingSlash: true });
+      var raw = e.target.value;
+      var formatted = raw.endsWith('/')
+        ? formatChord(raw, { preserveTrailingSlash: true })
+        : formatChordFinal(raw);
+      if(formatted !== e.target.value) e.target.value = formatted;
+      pair.chord = formatted;
+      renderPreview();
+    });
+    pairEl.querySelector('[data-role=chord]').addEventListener('blur', e=>{
+      var formatted = formatChordFinal(e.target.value);
       if(formatted !== e.target.value) e.target.value = formatted;
       pair.chord = formatted;
       renderPreview();
@@ -1066,8 +1075,9 @@ function formatNumeral(value, repeatOnly){
 function formatChordPart(part){
   var s = (part || '').trim();
   if(!s) return '';
-  if(/^[A-Ga-g]$/.test(s)) return s.toUpperCase();
-  return s.toLowerCase();
+  var m = s.match(/^([A-Ga-g])([#b]?)(.*)$/);
+  if(!m) return s;
+  return m[1].toUpperCase() + m[2] + (m[3] || '').toLowerCase();
 }
 
 function formatChord(value, options){
