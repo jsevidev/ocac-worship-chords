@@ -227,8 +227,27 @@ permalink: /builder/
     border: 1px solid var(--paper-rule);
     border-radius: 8px;
     padding: 14px;
-    margin-bottom: 14px;
+    margin-bottom: 0;
     background: var(--surface-alt);
+  }
+  .section-insert{
+    display: flex;
+    justify-content: center;
+    padding: 6px 0 10px;
+  }
+  .section-insert-btn{
+    font-size: 11px;
+    padding: 3px 10px;
+    color: var(--ink-soft);
+  }
+  .section-insert-btn:hover{ color: var(--ink); background: var(--brass-soft); }
+  .section-block-actions{
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--paper-rule);
   }
   .section-head{ display:flex; gap:10px; align-items: flex-end; margin-bottom: 10px; }
   .section-head .numeral{ width: 90px; flex: none; }
@@ -521,7 +540,7 @@ permalink: /builder/
       <div class="card">
         <h2>Sections <span id="section-status" class="status"></span></h2>
         <div id="sections"></div>
-        <button class="btn-brass" id="add-section">+ Add section</button>
+        <button class="btn-brass" id="add-section">+ Add section at end</button>
       </div>
 
       <div class="toolbar">
@@ -1121,6 +1140,19 @@ function renderSections(){
   const container = document.getElementById('sections');
   container.innerHTML = '';
   state.sections.forEach((sec, i)=>{
+    var insertZone = document.createElement('div');
+    insertZone.className = 'section-insert';
+    var insertBtn = document.createElement('button');
+    insertBtn.type = 'button';
+    insertBtn.className = 'btn-ghost btn-sm section-insert-btn';
+    insertBtn.textContent = i === 0 ? '+ Insert section at top' : '+ Insert section here';
+    insertBtn.addEventListener('click', function(){
+      state.sections.splice(i, 0, newSection());
+      renderSections(); renderPreview();
+    });
+    insertZone.appendChild(insertBtn);
+    container.appendChild(insertZone);
+
     const block = document.createElement('div');
     block.className = 'section-block';
 
@@ -1164,6 +1196,19 @@ function renderSections(){
       block.appendChild(addLineBtn);
     }
 
+    var blockActions = document.createElement('div');
+    blockActions.className = 'section-block-actions';
+    var insertBelowBtn = document.createElement('button');
+    insertBelowBtn.type = 'button';
+    insertBelowBtn.className = 'btn-ghost btn-sm';
+    insertBelowBtn.textContent = '+ Insert section below';
+    insertBelowBtn.addEventListener('click', function(){
+      state.sections.splice(i + 1, 0, newSection());
+      renderSections(); renderPreview();
+    });
+    blockActions.appendChild(insertBelowBtn);
+    block.appendChild(blockActions);
+
     container.appendChild(block);
 
     // wire events for this block
@@ -1190,6 +1235,10 @@ function renderSections(){
       renderSections(); renderPreview();
     });
     head.querySelector('[data-role=remove-section]').addEventListener('click', ()=>{
+      if(state.sections.length <= 1){
+        flashStatus('Keep at least one section', 'info');
+        return;
+      }
       state.sections.splice(i,1); renderSections(); renderPreview();
     });
     if(!sec.repeatOnly){
@@ -1277,6 +1326,7 @@ function renderRepeatPartsLine(i, sec){
         <input type="text" data-role="repeat-part-count" value="${escapeAttr(part.repeatCount ? part.repeatCount + 'x' : '')}" placeholder="2x">
       </div>
       <button class="btn-danger btn-sm" data-role="remove-repeat-part" title="Remove section">&times;</button>
+      <button class="btn-ghost btn-sm" data-role="insert-repeat-after" title="Insert section after this">+ After</button>
     `;
     partEl.querySelector('[data-role=repeat-label]').addEventListener('input', function(e){
       var formatted = formatRepeatPartLabel(e.target.value);
@@ -1294,6 +1344,10 @@ function renderRepeatPartsLine(i, sec){
       if(sec.repeatParts.length === 0) sec.repeatParts.push(newRepeatPart());
       renderSections(); renderPreview();
     });
+    partEl.querySelector('[data-role=insert-repeat-after]').addEventListener('click', function(){
+      sec.repeatParts.splice(k + 1, 0, newRepeatPart());
+      renderSections(); renderPreview();
+    });
     wrap.appendChild(partEl);
   });
 
@@ -1301,7 +1355,7 @@ function renderRepeatPartsLine(i, sec){
   controls.className = 'row-actions';
   var addBtn = document.createElement('button');
   addBtn.className = 'btn-ghost btn-sm';
-  addBtn.textContent = '+ Section';
+  addBtn.textContent = '+ Section at end';
   addBtn.addEventListener('click', function(){
     sec.repeatParts.push(newRepeatPart());
     renderSections(); renderPreview();
