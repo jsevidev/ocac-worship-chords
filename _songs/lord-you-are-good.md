@@ -4,7 +4,9 @@ notebook: 1
 page: 2
 ---
 ```
-E - E/B - D/E - A/E
+Intro 3x
+4      4       4       4
+E  -  B/E  -  D/E  -  A/E
 
 I 2x
 4      4       4       4
@@ -40,8 +42,6 @@ E  -  D  -  A/C#
 V 4x
 4     4     4     4
 E  -  B  -  D  -  A
-
-I (2x)
 
 II
 
