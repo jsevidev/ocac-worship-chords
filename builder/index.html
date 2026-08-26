@@ -199,7 +199,26 @@ permalink: /builder/
     white-space: pre;
     margin: 0;
   }
-  .output-actions{ display:flex; gap:8px; margin-top: 12px; }
+  .output-actions{ display:flex; gap:8px; margin-top: 12px; flex-wrap: wrap; }
+  .save-folder{
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed var(--paper-rule);
+  }
+  .folder-status{
+    margin: 0 0 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .folder-status.linked{ color: var(--brass); font-weight: 600; }
+  .download-status{
+    margin: 8px 0 0;
+    font-size: 12px;
+    color: var(--brass);
+    font-weight: 600;
+    min-height: 16px;
+  }
 
   .saved-list{ list-style:none; margin:0; padding:0; }
   .saved-item{
@@ -265,7 +284,12 @@ permalink: /builder/
         <pre class="output" id="preview"></pre>
         <div class="output-actions">
           <button class="btn-ghost btn-sm" id="copy-output">Copy text</button>
-          <button class="btn-brass btn-sm" id="download-md">Download .md</button>
+          <button class="btn-brass btn-sm" id="download-md">Save .md</button>
+        </div>
+        <div class="save-folder">
+          <p class="folder-status" id="folder-status">Link your project's <strong>_songs</strong> folder once — future saves go there automatically.</p>
+          <button class="btn-ghost btn-sm" id="pick-folder">Link _songs folder</button>
+          <p class="download-status" id="download-status"></p>
         </div>
       </div>
 
@@ -487,15 +511,42 @@ document.getElementById('copy-output').addEventListener('click', async ()=>{
   }catch(e){ flashStatus('Copy failed'); }
 });
 
-document.getElementById('download-md').addEventListener('click', ()=>{
+document.getElementById('download-md').addEventListener('click', async ()=>{
   const title = document.getElementById('f-title').value.trim() || 'untitled';
-  const blob = new Blob([buildOutput()], {type:'text/markdown'});
+  const filename = `${slugify(title)}.md`;
+  const content = buildOutput();
+
+  try {
+    const saved = await saveToSongsFolder(filename, content);
+    if (saved) {
+      flashDownloadStatus('Saved to _songs/' + filename);
+      return;
+    }
+  } catch (e) {
+    console.error(e);
+    flashDownloadStatus('Folder save failed — downloaded instead');
+  }
+
+  fallbackDownload(filename, content);
+});
+
+document.getElementById('pick-folder').addEventListener('click', pickSongsFolder);
+
+function fallbackDownload(filename, content){
+  const blob = new Blob([content], {type:'text/markdown'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = `${slugify(title)}.md`;
+  a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-});
+  flashDownloadStatus('Downloaded ' + filename + ' — link _songs folder to skip this');
+}
+
+function flashDownloadStatus(msg){
+  const el = document.getElementById('download-status');
+  el.textContent = msg;
+  setTimeout(()=>{ el.textContent=''; }, 3500);
+}
 
 function flashStatus(msg){
   const el = document.getElementById('section-status');
@@ -524,6 +575,107 @@ const storage = {
     return { keys };
   }
 };
+
+// ---- save folder (File System Access API) ----
+const DIR_KEY = 'songs-dir';
+const idb = {
+  open(){
+    return new Promise(function(resolve, reject){
+      var req = indexedDB.open('ocac-builder', 1);
+      req.onupgradeneeded = function(){
+        req.result.createObjectStore('handles');
+      };
+      req.onsuccess = function(){ resolve(req.result); };
+      req.onerror = function(){ reject(req.error); };
+    });
+  },
+  get(key){
+    return idb.open().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction('handles', 'readonly');
+        var req = tx.objectStore('handles').get(key);
+        req.onsuccess = function(){ resolve(req.result); };
+        req.onerror = function(){ reject(req.error); };
+      });
+    });
+  },
+  set(key, value){
+    return idb.open().then(function(db){
+      return new Promise(function(resolve, reject){
+        var tx = db.transaction('handles', 'readwrite');
+        tx.objectStore('handles').put(value, key);
+        tx.oncomplete = function(){ resolve(); };
+        tx.onerror = function(){ reject(tx.error); };
+      });
+    });
+  }
+};
+
+function supportsFolderSave(){
+  return typeof window.showDirectoryPicker === 'function';
+}
+
+async function getSongsDirHandle(){
+  var handle = await idb.get(DIR_KEY);
+  if(!handle) return null;
+  var perm = await handle.queryPermission({ mode: 'readwrite' });
+  if(perm !== 'granted'){
+    perm = await handle.requestPermission({ mode: 'readwrite' });
+  }
+  return perm === 'granted' ? handle : null;
+}
+
+async function saveToSongsFolder(filename, content){
+  var dir = await getSongsDirHandle();
+  if(!dir) return false;
+  var fileHandle = await dir.getFileHandle(filename, { create: true });
+  var writable = await fileHandle.createWritable();
+  await writable.write(content);
+  await writable.close();
+  return true;
+}
+
+function updateFolderUI(name){
+  var el = document.getElementById('folder-status');
+  var btn = document.getElementById('pick-folder');
+  if(name){
+    el.innerHTML = 'Saving to folder: <strong>' + name + '</strong>';
+    el.classList.add('linked');
+    btn.textContent = 'Change folder';
+  }else{
+    el.innerHTML = 'Link your project\'s <strong>_songs</strong> folder once — future saves go there automatically.';
+    el.classList.remove('linked');
+    btn.textContent = 'Link _songs folder';
+  }
+}
+
+async function pickSongsFolder(){
+  if(!supportsFolderSave()){
+    flashDownloadStatus('Use Chrome or Edge to save directly to _songs');
+    return;
+  }
+  try{
+    var handle = await window.showDirectoryPicker({ mode: 'readwrite' });
+    await idb.set(DIR_KEY, handle);
+    updateFolderUI(handle.name);
+    flashDownloadStatus('Linked folder: ' + handle.name);
+  }catch(e){
+    if(e.name !== 'AbortError') flashDownloadStatus('Could not link folder');
+  }
+}
+
+async function initSaveFolder(){
+  if(!supportsFolderSave()){
+    document.getElementById('folder-status').innerHTML =
+      'Direct save to <strong>_songs</strong> needs Chrome or Edge. Other browsers download the file instead.';
+    document.getElementById('pick-folder').style.display = 'none';
+    return;
+  }
+  try{
+    var handle = await idb.get(DIR_KEY);
+    if(handle) updateFolderUI(handle.name);
+  }catch(e){ /* no linked folder yet */ }
+}
 
 async function saveSong(){
   state.title = document.getElementById('f-title').value.trim();
@@ -620,6 +772,7 @@ async function renderSavedList(){
 state.sections.push(newSection());
 renderSections();
 renderSavedList();
+initSaveFolder();
 
 (function () {
   var btn = document.getElementById('theme-toggle');
