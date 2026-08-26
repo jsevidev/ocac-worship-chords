@@ -293,6 +293,7 @@ permalink: /builder/
     line-height: 1.5;
   }
   .github-status.connected{ color: #5A9E6F; font-weight: 600; }
+  .github-status.success{ color: #5A9E6F; font-weight: 600; }
   .publish-actions{
     display: flex;
     flex-wrap: wrap;
@@ -735,6 +736,7 @@ async function batchPushToGithub(){
   var pushBtn = document.getElementById('push-github');
   pushBtn.disabled = true;
   pushBtn.textContent = 'Pushing…';
+  var pushSuccess = null;
 
   try{
     var owner = repoConfig.owner;
@@ -783,16 +785,30 @@ async function batchPushToGithub(){
       body: JSON.stringify({ sha: commit.sha })
     });
 
-    showToast('Pushed ' + pendingSongs.length + ' song(s) — site updates in ~1 min', 'success');
+    var pushedCount = pendingSongs.length;
+    var pushedNames = pendingSongs.map(function(s){ return s.title || s.name; });
+    pushSuccess = { count: pushedCount, names: pushedNames };
+    showToast('Pushed ' + pushedCount + ' song(s) — site updates in ~1 min', 'success');
+    await showAlert({
+      title: 'Published successfully',
+      message: 'Pushed ' + pushedCount + ' song' + (pushedCount === 1 ? '' : 's') + ' to GitHub: ' + pushedNames.join(', ') + '. The live site should update in about a minute.',
+      confirmLabel: 'Done'
+    });
     await renderPendingPublish();
     await renderFolderSongs();
   }catch(e){
     showToast('Push failed — check token has repo access', 'error');
+    await showAlert({
+      title: 'Push failed',
+      message: 'Could not publish to GitHub. Check that your token has repo access and try again.',
+      confirmLabel: 'OK'
+    });
     console.error(e);
   }
 
   pushBtn.textContent = 'Push to GitHub';
   updateGithubUI();
+  if(pushSuccess) setGithubPushSuccess(pushSuccess.count, pushSuccess.names);
 }
 
 function initGithubPublish(){
@@ -812,6 +828,12 @@ function initGithubPublish(){
   });
   document.getElementById('refresh-pending').addEventListener('click', renderPendingPublish);
   document.getElementById('push-github').addEventListener('click', batchPushToGithub);
+}
+
+function setGithubPushSuccess(count, names){
+  var status = document.getElementById('github-status');
+  status.textContent = 'Last push successful — ' + count + ' song' + (count === 1 ? '' : 's') + ' published. Site updates in ~1 min.';
+  status.className = 'github-status success';
 }
 
 function showToast(message, type){
@@ -838,6 +860,7 @@ function showConfirm(opts){
   messageEl.textContent = opts.message || '';
   confirmBtn.textContent = opts.confirmLabel || 'Confirm';
   confirmBtn.className = opts.danger ? 'btn-danger' : 'btn-brass';
+  cancelBtn.hidden = false;
   backdrop.hidden = false;
   requestAnimationFrame(function(){ backdrop.classList.add('open'); });
   confirmBtn.focus();
@@ -861,6 +884,44 @@ function showConfirm(opts){
     cancelBtn.onclick = function(){ close(false); };
     backdrop.onclick = function(e){
       if(e.target === backdrop) close(false);
+    };
+    document.addEventListener('keydown', onKey);
+  });
+}
+
+function showAlert(opts){
+  opts = opts || {};
+  var backdrop = document.getElementById('dialog-backdrop');
+  var titleEl = document.getElementById('dialog-title');
+  var messageEl = document.getElementById('dialog-message');
+  var confirmBtn = document.getElementById('dialog-confirm');
+  var cancelBtn = document.getElementById('dialog-cancel');
+  titleEl.textContent = opts.title || 'Notice';
+  messageEl.textContent = opts.message || '';
+  confirmBtn.textContent = opts.confirmLabel || 'OK';
+  confirmBtn.className = 'btn-brass';
+  cancelBtn.hidden = true;
+  backdrop.hidden = false;
+  requestAnimationFrame(function(){ backdrop.classList.add('open'); });
+  confirmBtn.focus();
+  return new Promise(function(resolve){
+    function close(){
+      backdrop.classList.remove('open');
+      setTimeout(function(){
+        backdrop.hidden = true;
+        cancelBtn.hidden = false;
+        confirmBtn.onclick = null;
+        backdrop.onclick = null;
+        document.removeEventListener('keydown', onKey);
+      }, 200);
+      resolve();
+    }
+    function onKey(e){
+      if(e.key === 'Escape' || e.key === 'Enter') close();
+    }
+    confirmBtn.onclick = close;
+    backdrop.onclick = function(e){
+      if(e.target === backdrop) close();
     };
     document.addEventListener('keydown', onKey);
   });
