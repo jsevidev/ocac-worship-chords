@@ -281,14 +281,14 @@ function renderSections(){
     const head = document.createElement('div');
     head.className = 'section-head';
     head.innerHTML = `
-      <div class="numeral">
-        <label>Numeral</label>
-        <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="I">
+      <div class="numeral" style="${sec.repeatOnly ? 'flex:1' : ''}">
+        <label>${sec.repeatOnly ? 'Repeat line' : 'Numeral'}</label>
+        <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="${sec.repeatOnly ? 'II - III 2x' : 'I'}">
       </div>
       <div style="flex:1">
         <div class="checkbox-row">
           <input type="checkbox" data-role="repeat" ${sec.repeatOnly ? 'checked' : ''}>
-          Repeat reference only (no chords, just replay this numeral)
+          Repeat instruction only (e.g. I or II - III 2x)
         </div>
       </div>
       <button class="btn-danger btn-sm" data-role="remove-section">Remove</button>

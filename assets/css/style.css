@@ -151,32 +151,11 @@ main{
   border-radius: 8px;
   padding: 24px 20px;
 }
-.play-order{
-  text-align: center;
-  font-family: Georgia, serif;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  color: var(--ink);
-  padding: 4px 8px 28px;
-  margin-bottom: 8px;
-  border-bottom: 1px solid var(--paper-rule);
-}
-.chord-sections{
-  padding-top: 8px;
-}
 .chord-part{
-  padding: 20px 4px;
-  margin-bottom: 8px;
-}
-.chord-part:not(:last-child){
-  border-bottom: 1px solid var(--paper-rule);
-  margin-bottom: 12px;
-  padding-bottom: 28px;
+  padding: 8px 4px 24px;
 }
 .chord-part:last-child{
-  margin-bottom: 0;
-  padding-bottom: 4px;
+  padding-bottom: 8px;
 }
 .section-label{
   font-family: Georgia, serif;
@@ -186,6 +165,17 @@ main{
   color: var(--ink-soft);
   text-transform: uppercase;
   letter-spacing: .04em;
+}
+.repeat-flow{
+  text-align: center;
+  font-family: Georgia, serif;
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--brass);
+  padding: 20px 8px 28px;
+  margin-bottom: 4px;
+  border-bottom: 1px dashed var(--paper-rule);
 }
 .chord-row{
   display: flex;

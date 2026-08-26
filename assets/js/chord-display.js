@@ -37,6 +37,13 @@ function isChordLine(line) {
   return /[A-Ga-g]/.test(line) && (line.indexOf(' - ') !== -1 || /^[A-Ga-g#b\d\/]+$/.test(line.trim()));
 }
 
+function isRepeatLine(line) {
+  line = line.trim();
+  if (!line || isBeatLine(line)) return false;
+  if (isNumeral(line)) return true;
+  return /^([IVXLCivxlc]+(\s+\d+x)?)(\s*-\s*[IVXLCivxlc]+(\s+\d+x)?)*$/i.test(line);
+}
+
 function parsePairs(beatLine, chordLine) {
   var beats = beatLine.match(/\d+/g) || [];
   var chords = chordLine.split(/\s+-\s+/).map(function (s) { return s.trim(); }).filter(Boolean);
@@ -58,26 +65,13 @@ function renderRow(pairs) {
   return html;
 }
 
-function formatPlayOrder(order) {
-  var parts = [];
-  var i = 0;
-  while (i < order.length) {
-    var numeral = order[i];
-    var count = 1;
-    while (i + count < order.length && order[i + count] === numeral) {
-      count++;
-    }
-    parts.push(count > 1 ? numeral + ' ' + count + 'x' : numeral);
-    i += count;
-  }
-  return parts.join(' - ');
+function renderRepeatFlow(text) {
+  return '<div class="repeat-flow">' + text + '</div>';
 }
 
 function parseSong(text) {
   var lines = text.split('\n');
-  var playOrder = [];
-  var sections = {};
-  var sectionOrder = [];
+  var parts = [];
   var i = 0;
 
   while (i < lines.length) {
@@ -93,13 +87,9 @@ function parseSong(text) {
       var after = (i + 2 < lines.length) ? lines[i + 2].trim() : '';
 
       if (isBeatLine(next) && isChordLine(after)) {
-        playOrder.push(line);
-        if (!sections[line]) {
-          sections[line] = { numeral: line, rows: [] };
-          sectionOrder.push(line);
-        }
-
+        var section = { type: 'section', numeral: line, rows: [] };
         i++;
+
         while (i < lines.length) {
           var beatLine = lines[i].trim();
           var chordLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
@@ -110,15 +100,19 @@ function parseSong(text) {
           var pairs = parsePairs(beatLine, chordLine);
           if (!pairs) return null;
 
-          sections[line].rows.push(pairs);
+          section.rows.push(pairs);
           i += 2;
 
           if (i < lines.length && !lines[i].trim()) i++;
         }
+
+        parts.push(section);
         continue;
       }
+    }
 
-      playOrder.push(line);
+    if (isRepeatLine(line)) {
+      parts.push({ type: 'repeat', text: line });
       i++;
       continue;
     }
@@ -126,34 +120,31 @@ function parseSong(text) {
     return null;
   }
 
-  if (playOrder.length === 0) return null;
-  return { playOrder: playOrder, sections: sections, sectionOrder: sectionOrder };
-}
-
-function renderPlayOrder(order) {
-  return '<div class="play-order">' + formatPlayOrder(order) + '</div>';
+  return parts.length ? parts : null;
 }
 
 function renderChordBlock(text, legend) {
-  var parsed = parseSong(text);
-  if (!parsed) return null;
+  var parts = parseSong(text);
+  if (!parts) return null;
 
   var html = '<div class="chord-sheet">';
-  html += renderPlayOrder(parsed.playOrder);
 
-  html += '<div class="chord-sections">';
-  parsed.sectionOrder.forEach(function (numeral) {
-    var section = parsed.sections[numeral];
-    var sectionName = legend[numeral] || legend[numeral.toUpperCase()];
-    var label = sectionName ? numeral + ' \u00b7 ' + sectionName : numeral;
+  parts.forEach(function (part) {
+    if (part.type === 'repeat') {
+      html += renderRepeatFlow(part.text);
+      return;
+    }
+
+    var sectionName = legend[part.numeral] || legend[part.numeral.toUpperCase()];
+    var label = sectionName ? part.numeral + ' \u00b7 ' + sectionName : part.numeral;
 
     html += '<div class="chord-part"><div class="section-label">' + label + '</div>';
-    section.rows.forEach(function (pairs) {
+    part.rows.forEach(function (pairs) {
       html += renderRow(pairs);
     });
     html += '</div>';
   });
-  html += '</div></div>';
 
+  html += '</div>';
   return html;
 }
