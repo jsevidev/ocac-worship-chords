@@ -890,7 +890,7 @@ function alignLine(pairs){
   const sepBeat  = '     '; // same 5-char width as sepChord
   cleaned.forEach(p=>{
     const beat = (p.beat||'').trim();
-    const chord = formatChord((p.chord||'').trim());
+    const chord = formatChordFinal((p.chord||'').trim());
     const width = Math.max(beat.length, chord.length, 1);
     beatCells.push(padCenter(beat, width));
     chordCells.push(padRight(chord, width));
@@ -1008,7 +1008,7 @@ function renderPairLine(i, j, line){
       pair.beat = e.target.value; renderPreview();
     });
     pairEl.querySelector('[data-role=chord]').addEventListener('input', e=>{
-      var formatted = formatChord(e.target.value);
+      var formatted = formatChord(e.target.value, { preserveTrailingSlash: true });
       if(formatted !== e.target.value) e.target.value = formatted;
       pair.chord = formatted;
       renderPreview();
@@ -1070,13 +1070,28 @@ function formatChordPart(part){
   return s.toLowerCase();
 }
 
-function formatChord(value){
+function formatChord(value, options){
+  options = options || {};
+  var s = value || '';
+  if(!s) return '';
+  var trailingSlash = options.preserveTrailingSlash !== false && s.endsWith('/');
+  var core = trailingSlash ? s.slice(0, -1) : s;
+  if(!core && trailingSlash) return '/';
+  var formatted;
+  if(core.indexOf('/') !== -1){
+    formatted = core.split('/').map(formatChordPart).join('/');
+  }else{
+    formatted = formatChordPart(core);
+  }
+  return trailingSlash ? formatted + '/' : formatted;
+}
+
+function formatChordFinal(value){
   var s = (value || '').trim();
   if(!s) return '';
-  if(s.indexOf('/') !== -1){
-    return s.split('/').map(formatChordPart).filter(Boolean).join('/');
-  }
-  return formatChordPart(s);
+  if(s.endsWith('/')) s = s.slice(0, -1);
+  if(!s) return '';
+  return formatChord(s, { preserveTrailingSlash: false });
 }
 
 function slugify(title){
@@ -1359,7 +1374,7 @@ async function loadFromFolder(fileHandle){
       sec.numeral = formatNumeral(sec.numeral, sec.repeatOnly);
       if(!sec.repeatOnly && sec.lines){
         sec.lines.forEach(function(line){
-          line.forEach(function(pair){ pair.chord = formatChord(pair.chord); });
+          line.forEach(function(pair){ pair.chord = formatChordFinal(pair.chord); });
         });
       }
     });
@@ -1463,7 +1478,7 @@ async function loadSong(id){
       sec.numeral = formatNumeral(sec.numeral, sec.repeatOnly);
       if(!sec.repeatOnly && sec.lines){
         sec.lines.forEach(function(line){
-          line.forEach(function(pair){ pair.chord = formatChord(pair.chord); });
+          line.forEach(function(pair){ pair.chord = formatChordFinal(pair.chord); });
         });
       }
     });
