@@ -540,6 +540,17 @@ main{
   text-transform: uppercase;
   letter-spacing: .06em;
 }
+.section-repeat{
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--brass);
+  padding: 2px 8px;
+  background: var(--brass-soft);
+  border-radius: 999px;
+  border: 1px solid var(--brass-light);
+}
 
 .repeat-flow{
   display: flex;

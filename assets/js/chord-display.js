@@ -29,6 +29,14 @@ function isNumeral(line) {
   return /^[IVXLCivxlc]+$/.test(line.trim());
 }
 
+function parseSectionHeader(line) {
+  line = line.trim();
+  var m = line.match(/^([IVXLCivxlc]+)\s+(\d+x)$/i);
+  if (m) return { numeral: m[1].toUpperCase(), repeat: m[2] };
+  if (isNumeral(line)) return { numeral: line.toUpperCase(), repeat: '' };
+  return null;
+}
+
 function isBeatLine(line) {
   return /^\d[\d\s]*$/.test(line.trim());
 }
@@ -82,19 +90,21 @@ function parseSong(text) {
       continue;
     }
 
-    if (isNumeral(line)) {
+    var header = parseSectionHeader(line);
+    if (header) {
       var next = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
       var after = (i + 2 < lines.length) ? lines[i + 2].trim() : '';
 
       if (isBeatLine(next) && isChordLine(after)) {
-        var section = { type: 'section', numeral: line, rows: [] };
+        var section = { type: 'section', numeral: header.numeral, repeat: header.repeat, rows: [] };
         i++;
 
         while (i < lines.length) {
           var beatLine = lines[i].trim();
           var chordLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
 
-          if (!beatLine || isNumeral(beatLine)) break;
+          if (!beatLine || parseSectionHeader(beatLine)) break;
+          if (/^\d+x$/i.test(beatLine)) break;
           if (!isBeatLine(beatLine) || !isChordLine(chordLine)) break;
 
           var pairs = parsePairs(beatLine, chordLine);
@@ -104,6 +114,11 @@ function parseSong(text) {
           i += 2;
 
           if (i < lines.length && !lines[i].trim()) i++;
+        }
+
+        if (i < lines.length && /^\d+x$/i.test(lines[i].trim())) {
+          section.repeat = lines[i].trim();
+          i++;
         }
 
         parts.push(section);
@@ -139,6 +154,9 @@ function renderChordBlock(text, legend) {
     var labelHtml = sectionName
       ? '<span class="section-numeral">' + part.numeral + '</span><span class="section-name">' + sectionName + '</span>'
       : '<span class="section-numeral">' + part.numeral + '</span>';
+    if (part.repeat) {
+      labelHtml += '<span class="section-repeat">' + part.repeat + '</span>';
+    }
 
     html += '<div class="chord-part"><div class="section-label">' + labelHtml + '</div>';
     part.rows.forEach(function (pairs) {

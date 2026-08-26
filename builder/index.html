@@ -183,6 +183,7 @@ permalink: /builder/
   }
   .section-head{ display:flex; gap:10px; align-items: flex-end; margin-bottom: 10px; }
   .section-head .numeral{ width: 90px; flex: none; }
+  .section-head .repeat-count{ width: 56px; flex: none; }
   .checkbox-row{ display:flex; align-items:center; gap:6px; font-size:13px; color: var(--ink-soft); margin-bottom: 2px; }
   .checkbox-row input{ width:auto; }
 
@@ -415,6 +416,7 @@ permalink: /builder/
       <ul>
         <li><strong>Save draft</strong> &mdash; temporary backup in this browser while you transcribe. Won&rsquo;t appear on the site.</li>
         <li><strong>Save .md</strong> &mdash; the real song file for <strong>_songs/</strong>. Commit and push to publish on the site.</li>
+        <li><strong>Section repeat</strong> &mdash; use the <strong>Repeat</strong> field (e.g. <strong>2x</strong>) to play that section twice. Saved as <strong>III 2x</strong> on the section line.</li>
         <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>Am/G</strong>, etc.).</li>
       </ul>
     </div>
@@ -865,7 +867,7 @@ function flashDownloadStatus(msg, type){ showToast(msg, type || 'success'); }
 function flashStatus(msg, type){ showToast(msg, type || 'info'); }
 
 function newSection(){
-  return { numeral: '', repeatOnly: false, lines: [ newLine() ] };
+  return { numeral: '', repeatOnly: false, repeatCount: '', lines: [ newLine() ] };
 }
 function newLine(){ return [ {beat:'', chord:''}, {beat:'', chord:''} ]; }
 
@@ -911,9 +913,14 @@ function buildOutput(){
   const body = state.sections.map(sec=>{
     const numeral = formatNumeral(sec.numeral.trim(), sec.repeatOnly) || '?';
     if(sec.repeatOnly){ return numeral; }
+    var header = numeral;
+    if(sec.repeatCount){
+      var n = String(sec.repeatCount).replace(/x$/i, '');
+      if(n) header += ' ' + n + 'x';
+    }
     const rendered = sec.lines.map(alignLine).filter(Boolean).map(l => `${l.beats}\n${l.chords}`);
-    if(rendered.length === 0) return numeral;
-    return `${numeral}\n${rendered.join('\n\n')}`;
+    if(rendered.length === 0) return header;
+    return `${header}\n${rendered.join('\n\n')}`;
   }).join('\n\n');
 
   return `${fm}\n\`\`\`\n${body}\n\`\`\``;
@@ -937,6 +944,11 @@ function renderSections(){
         <label>${sec.repeatOnly ? 'Repeat line' : 'Numeral'}</label>
         <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="${sec.repeatOnly ? 'e.g. II - III 2x' : 'e.g. I'}">
       </div>
+      ${sec.repeatOnly ? '' : `
+      <div class="repeat-count">
+        <label>Repeat</label>
+        <input type="text" data-role="repeat-count" value="${escapeAttr(sec.repeatCount ? sec.repeatCount + 'x' : '')}" placeholder="2x">
+      </div>`}
       <div style="flex:1">
         <div class="checkbox-row">
           <input type="checkbox" data-role="repeat" ${sec.repeatOnly ? 'checked' : ''}>
@@ -971,6 +983,15 @@ function renderSections(){
       sec.numeral = formatted;
       renderPreview();
     });
+    var repeatCountEl = head.querySelector('[data-role=repeat-count]');
+    if(repeatCountEl){
+      repeatCountEl.addEventListener('input', e=>{
+        var formatted = formatRepeatCount(e.target.value);
+        if(formatted !== e.target.value) e.target.value = formatted;
+        sec.repeatCount = formatted.replace(/x$/i, '');
+        renderPreview();
+      });
+    }
     head.querySelector('[data-role=repeat]').addEventListener('change', e=>{
       sec.repeatOnly = e.target.checked; renderSections(); renderPreview();
     });
@@ -1070,6 +1091,22 @@ function formatRepeatLine(value){
 
 function formatNumeral(value, repeatOnly){
   return repeatOnly ? formatRepeatLine(value) : formatSectionNumeral(value);
+}
+
+function formatRepeatCount(value){
+  var v = (value || '').trim();
+  if(!v) return '';
+  var m = v.match(/^(\d+)\s*x?$/i);
+  if(m) return m[1] + 'x';
+  return v;
+}
+
+function parseSectionHeader(line){
+  line = line.trim();
+  var m = line.match(/^([IVXLCivxlc]+)\s+(\d+x)$/i);
+  if(m) return { numeral: m[1].toUpperCase(), repeatCount: m[2].replace(/x$/i, '') };
+  if(parseIsNumeral(line)) return { numeral: line.toUpperCase(), repeatCount: '' };
+  return null;
 }
 
 function formatChordPart(part){
@@ -1327,16 +1364,18 @@ function parseChordBody(text){
   while(i < lines.length){
     var line = lines[i].trim();
     if(!line){ i++; continue; }
-    if(parseIsNumeral(line)){
+    if(parseIsNumeral(line) || parseSectionHeader(line)){
+      var header = parseSectionHeader(line) || { numeral: line.toUpperCase(), repeatCount: '' };
       var next = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
       var after = (i + 2 < lines.length) ? lines[i + 2].trim() : '';
       if(parseIsBeatLine(next) && parseIsChordLine(after)){
-        var sec = { numeral: line, repeatOnly: false, lines: [] };
+        var sec = { numeral: header.numeral, repeatOnly: false, repeatCount: header.repeatCount || '', lines: [] };
         i++;
         while(i < lines.length){
           var beatLine = lines[i].trim();
           var chordLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
-          if(!beatLine || parseIsNumeral(beatLine)) break;
+          if(!beatLine || parseIsNumeral(beatLine) || parseSectionHeader(beatLine)) break;
+          if(/^\d+x$/i.test(beatLine)) break;
           if(!parseIsBeatLine(beatLine) || !parseIsChordLine(chordLine)) break;
           var beats = beatLine.match(/\d+/g) || [];
           var chords = chordLine.split(/\s+-\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
@@ -1345,6 +1384,10 @@ function parseChordBody(text){
           sec.lines.push(pairs);
           i += 2;
           if(i < lines.length && !lines[i].trim()) i++;
+        }
+        if(i < lines.length && /^\d+x$/i.test(lines[i].trim())){
+          sec.repeatCount = lines[i].trim().replace(/x$/i, '');
+          i++;
         }
         sections.push(sec);
         continue;
