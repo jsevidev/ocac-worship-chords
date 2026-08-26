@@ -32,7 +32,7 @@ Bm  -  A  -  G  -  F#m  -  G  -  Bm  -  A
 2      2     4     4
 Bm  -  A  -  G  -  A
 
-
+1     1     1     1     1     1
 G  -  A  -  G  -  A  -  G  -  A
 
 II (2x) - III (8x)
