@@ -23,6 +23,13 @@ section_legend:
   - { numeral: "IV", name: "Bridge" }
   - { numeral: "V", name: "Outro" }
 
+# GitHub publish settings (used by the builder)
+publish:
+  owner: jsevidev
+  repo: ocac-worship-chords
+  branch: main
+  songs_path: _songs
+
 exclude:
   - README.md
   - Gemfile
