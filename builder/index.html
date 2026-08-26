@@ -232,22 +232,27 @@ permalink: /builder/
   }
   .section-head{ display:flex; gap:10px; align-items: flex-end; margin-bottom: 10px; }
   .section-head .numeral{ width: 90px; flex: none; }
-  .section-head .numeral.repeat-line-field{ width: auto; flex: 1; min-width: 0; }
-  .repeat-line-row{ display: flex; gap: 6px; align-items: center; }
-  .repeat-line-row input{ flex: 1; min-width: 0; }
-  .repeat-line-row select{
-    flex: none;
-    font-family: 'Inter', sans-serif;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 8px 10px;
-    border: 1px solid var(--paper-rule);
-    border-radius: 6px;
-    background: var(--surface-alt);
-    color: var(--ink-soft);
-    cursor: pointer;
-  }
   .section-head .repeat-count{ width: 56px; flex: none; }
+  .repeat-parts-line{
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
+    margin-top: 4px;
+    padding-top: 10px;
+    border-top: 1px dashed var(--paper-rule);
+  }
+  .repeat-part input[data-role=repeat-label]{
+    width: 72px;
+    text-align: center;
+    font-weight: 600;
+  }
+  .repeat-hint{
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.4;
+  }
   .checkbox-row{ display:flex; align-items:center; gap:6px; font-size:13px; color: var(--ink-soft); margin-bottom: 2px; }
   .checkbox-row input{ width:auto; }
 
@@ -485,7 +490,7 @@ permalink: /builder/
         <li><strong>Save .md</strong> &mdash; the real song file for <strong>_songs/</strong>. Commit and push to publish on the site.</li>
         <li><strong>Section repeat</strong> &mdash; use the section <strong>Repeat</strong> field (e.g. <strong>2x</strong>) to play that whole section twice. Saved as <strong>III 2x</strong>.</li>
         <li><strong>Line repeat</strong> &mdash; use <strong>Repeat</strong> on a chord line to play that sequence again (e.g. E-A three times saves as <strong>E - A - 3x</strong>, then continue with the next line).</li>
-        <li><strong>Repeat line</strong> &mdash; check <strong>Repeat instruction only</strong> and enter flow like <strong>I (2x) - II</strong> or <strong>II - III 2x</strong>. Pick sections from the dropdown or type custom labels (e.g. Intro).</li>
+        <li><strong>Repeat line</strong> &mdash; check <strong>Repeat instruction only</strong>, then add sections one by one (like chords). Optional <strong>Repeat</strong> on each (e.g. I + 2x → <strong>I (2x) - II</strong>).</li>
         <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>Am/G</strong>, etc.).</li>
       </ul>
     </div>
@@ -1002,7 +1007,10 @@ function flashDownloadStatus(msg, type){ showToast(msg, type || 'success'); }
 function flashStatus(msg, type){ showToast(msg, type || 'info'); }
 
 function newSection(){
-  return { numeral: '', repeatOnly: false, repeatCount: '', lines: [ newLine() ] };
+  return { numeral: '', repeatOnly: false, repeatCount: '', repeatParts: null, lines: [ newLine() ] };
+}
+function newRepeatPart(){
+  return { label: '', repeatCount: '' };
 }
 function newLine(){
   return { repeatCount: '', pairs: [ {beat:'', chord:''}, {beat:'', chord:''} ] };
@@ -1016,11 +1024,22 @@ function normalizeLine(line){
 
 function normalizeSections(sections){
   return (sections || [ newSection() ]).map(function(sec){
-    if(!sec.repeatOnly && sec.lines){
+    if(sec.repeatOnly){
+      normalizeRepeatSection(sec);
+    }else if(sec.lines){
       sec.lines = sec.lines.map(normalizeLine);
+      sec.repeatParts = null;
     }
     return sec;
   });
+}
+
+function normalizeRepeatSection(sec){
+  if(!sec.repeatParts || !sec.repeatParts.length){
+    sec.repeatParts = parseRepeatLineToParts(sec.numeral || '');
+  }
+  if(sec.repeatParts.length === 0) sec.repeatParts.push(newRepeatPart());
+  sec.numeral = serializeRepeatParts(sec.repeatParts);
 }
 
 function padRight(str, width){
@@ -1068,8 +1087,11 @@ function buildOutput(){
   const fm = `---\ntitle: "${title}"\nnotebook: ${notebook || '""'}\npage: ${page || '""'}\n---`;
 
   const body = state.sections.map(sec=>{
-    const numeral = formatNumeral(sec.numeral.trim(), sec.repeatOnly) || '?';
-    if(sec.repeatOnly){ return numeral; }
+    if(sec.repeatOnly){
+      normalizeRepeatSection(sec);
+      return serializeRepeatParts(sec.repeatParts) || '?';
+    }
+    const numeral = formatNumeral(sec.numeral.trim(), false) || '?';
     var header = numeral;
     if(sec.repeatCount){
       var n = String(sec.repeatCount).replace(/x$/i, '');
@@ -1104,23 +1126,12 @@ function renderSections(){
 
     const head = document.createElement('div');
     head.className = 'section-head';
-    var repeatLineField = sec.repeatOnly
-      ? `<div class="numeral repeat-line-field" style="flex:1">
-          <label>Repeat line</label>
-          <div class="repeat-line-row">
-            <input type="text" data-role="numeral" list="repeat-section-options" value="${escapeAttr(sec.numeral)}" placeholder="e.g. I (2x) - II">
-            <select data-role="repeat-pick" title="Insert a section from this song">
-              <option value="">+ Section</option>
-            </select>
-          </div>
-        </div>`
-      : `<div class="numeral" style="">
-          <label>Numeral</label>
-          <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="e.g. I">
-        </div>`;
     head.innerHTML = `
-      ${repeatLineField}
       ${sec.repeatOnly ? '' : `
+      <div class="numeral">
+        <label>Numeral</label>
+        <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="e.g. I">
+      </div>
       <div class="repeat-count">
         <label>Repeat</label>
         <input type="text" data-role="repeat-count" value="${escapeAttr(sec.repeatCount ? sec.repeatCount + 'x' : '')}" placeholder="2x">
@@ -1128,14 +1139,17 @@ function renderSections(){
       <div style="flex:1">
         <div class="checkbox-row">
           <input type="checkbox" data-role="repeat" ${sec.repeatOnly ? 'checked' : ''}>
-          Repeat instruction only (e.g. I (2x) - II or II - III 2x)
+          Repeat instruction only
         </div>
+        ${sec.repeatOnly ? '<p class="repeat-hint">Build the play order below — each block is one section. Use <strong>Repeat</strong> for counts like I (2x).</p>' : ''}
       </div>
       <button class="btn-danger btn-sm" data-role="remove-section">Remove</button>
     `;
     block.appendChild(head);
 
-    if(!sec.repeatOnly){
+    if(sec.repeatOnly){
+      block.appendChild(renderRepeatPartsLine(i, sec));
+    }else{
       const linesWrap = document.createElement('div');
       linesWrap.dataset.role = 'lines';
       sec.lines.forEach((line, j)=>{
@@ -1153,32 +1167,27 @@ function renderSections(){
     container.appendChild(block);
 
     // wire events for this block
-    head.querySelector('[data-role=numeral]').addEventListener('input', e=>{
-      var formatted = formatNumeral(e.target.value, sec.repeatOnly);
-      if(formatted !== e.target.value) e.target.value = formatted;
-      sec.numeral = formatted;
-      renderPreview();
-    });
-    var repeatPick = head.querySelector('[data-role=repeat-pick]');
-    if(repeatPick){
-      fillRepeatSectionPicker(repeatPick);
-      repeatPick.addEventListener('change', function(e){
-        var val = e.target.value;
-        if(!val) return;
-        var input = head.querySelector('[data-role=numeral]');
-        var cur = input.value.trim();
-        input.value = cur ? cur + ' - ' + val : val;
-        var formatted = formatNumeral(input.value, true);
-        input.value = formatted;
+    var numeralEl = head.querySelector('[data-role=numeral]');
+    if(numeralEl){
+      numeralEl.addEventListener('input', e=>{
+        var formatted = formatNumeral(e.target.value, false);
+        if(formatted !== e.target.value) e.target.value = formatted;
         sec.numeral = formatted;
-        e.target.value = '';
         renderPreview();
       });
     }
     var repeatCountEl = head.querySelector('[data-role=repeat-count]');
     if(repeatCountEl) bindRepeatCountInput(repeatCountEl, function(v){ sec.repeatCount = v; });
     head.querySelector('[data-role=repeat]').addEventListener('change', e=>{
-      sec.repeatOnly = e.target.checked; renderSections(); renderPreview();
+      sec.repeatOnly = e.target.checked;
+      if(sec.repeatOnly){
+        sec.repeatParts = sec.numeral ? parseRepeatLineToParts(sec.numeral) : [ newRepeatPart() ];
+        if(sec.repeatParts.length === 0) sec.repeatParts.push(newRepeatPart());
+      }else{
+        sec.numeral = (sec.repeatParts && sec.repeatParts[0] && sec.repeatParts[0].label) ? sec.repeatParts[0].label : sec.numeral;
+        sec.repeatParts = null;
+      }
+      renderSections(); renderPreview();
     });
     head.querySelector('[data-role=remove-section]').addEventListener('click', ()=>{
       state.sections.splice(i,1); renderSections(); renderPreview();
@@ -1202,14 +1211,13 @@ function getRepeatSectionSuggestions(){
     seen[key] = true;
     items.push({ value: value, label: label || value });
   }
-  (sectionLegend || []).forEach(function(item){
-    add(item.numeral, item.numeral + ' · ' + item.name);
-    add(item.name, item.name + ' (' + item.numeral + ')');
-  });
   state.sections.forEach(function(sec){
     if(!sec.repeatOnly && sec.numeral && sec.numeral.trim()){
-      add(sec.numeral.trim());
+      add(sec.numeral.trim(), sec.numeral.trim() + ' (in this song)');
     }
+  });
+  ['I','II','III','IV','V','VI','VII','VIII'].forEach(function(n){
+    add(n);
   });
   return items;
 }
@@ -1226,14 +1234,81 @@ function updateRepeatSectionDatalist(){
   });
 }
 
-function fillRepeatSectionPicker(selectEl){
-  selectEl.innerHTML = '<option value="">+ Section</option>';
-  getRepeatSectionSuggestions().forEach(function(item){
-    var opt = document.createElement('option');
-    opt.value = item.value;
-    opt.textContent = item.label;
-    selectEl.appendChild(opt);
+function parseRepeatLineToParts(line){
+  line = (line || '').trim();
+  if(!line) return [ newRepeatPart() ];
+  if(parseIsNumeral(line)) return [{ label: line.toUpperCase(), repeatCount: '' }];
+  return line.split(/\s*-\s*/).map(function(part){
+    part = part.trim();
+    var parenMatch = part.match(/^(.+?)\s*\(\s*(\d+)\s*x\s*\)\s*$/i);
+    if(parenMatch) return { label: parenMatch[1].trim(), repeatCount: parenMatch[2] };
+    var suffixMatch = part.match(/^(.+?)\s+(\d+)x\s*$/i);
+    if(suffixMatch) return { label: suffixMatch[1].trim(), repeatCount: suffixMatch[2] };
+    return { label: part, repeatCount: '' };
   });
+}
+
+function serializeRepeatParts(parts){
+  return (parts || []).filter(function(p){ return (p.label || '').trim(); }).map(function(p){
+    var label = formatRepeatPartLabel(p.label.trim());
+    if(p.repeatCount){
+      var n = String(p.repeatCount).replace(/x$/i, '');
+      if(n) return label + ' (' + n + 'x)';
+    }
+    return label;
+  }).join(' - ');
+}
+
+function renderRepeatPartsLine(i, sec){
+  normalizeRepeatSection(sec);
+  var wrap = document.createElement('div');
+  wrap.className = 'repeat-parts-line';
+
+  sec.repeatParts.forEach(function(part, k){
+    var partEl = document.createElement('div');
+    partEl.className = 'repeat-part pair';
+    partEl.innerHTML = `
+      <div>
+        <span class="lbl">Section</span>
+        <input type="text" data-role="repeat-label" list="repeat-section-options" value="${escapeAttr(part.label)}" placeholder="e.g. I">
+      </div>
+      <div class="repeat-count">
+        <span class="lbl">Repeat</span>
+        <input type="text" data-role="repeat-part-count" value="${escapeAttr(part.repeatCount ? part.repeatCount + 'x' : '')}" placeholder="2x">
+      </div>
+      <button class="btn-danger btn-sm" data-role="remove-repeat-part" title="Remove section">&times;</button>
+    `;
+    partEl.querySelector('[data-role=repeat-label]').addEventListener('input', function(e){
+      var formatted = formatRepeatPartLabel(e.target.value);
+      if(formatted !== e.target.value) e.target.value = formatted;
+      part.label = formatted;
+      sec.numeral = serializeRepeatParts(sec.repeatParts);
+      renderPreview();
+    });
+    bindRepeatCountInput(partEl.querySelector('[data-role=repeat-part-count]'), function(v){
+      part.repeatCount = v;
+      sec.numeral = serializeRepeatParts(sec.repeatParts);
+    });
+    partEl.querySelector('[data-role=remove-repeat-part]').addEventListener('click', function(){
+      sec.repeatParts.splice(k, 1);
+      if(sec.repeatParts.length === 0) sec.repeatParts.push(newRepeatPart());
+      renderSections(); renderPreview();
+    });
+    wrap.appendChild(partEl);
+  });
+
+  var controls = document.createElement('div');
+  controls.className = 'row-actions';
+  var addBtn = document.createElement('button');
+  addBtn.className = 'btn-ghost btn-sm';
+  addBtn.textContent = '+ Section';
+  addBtn.addEventListener('click', function(){
+    sec.repeatParts.push(newRepeatPart());
+    renderSections(); renderPreview();
+  });
+  controls.appendChild(addBtn);
+  wrap.appendChild(controls);
+  return wrap;
 }
 
 function renderPairLine(i, j, lineObj){
@@ -1697,7 +1772,12 @@ function parseChordBody(text){
       }
     }
     if(parseIsRepeatLine(line)){
-      sections.push({ numeral: line, repeatOnly: true, lines: [ newLine() ] });
+      sections.push({
+        numeral: line,
+        repeatOnly: true,
+        repeatParts: parseRepeatLineToParts(line),
+        lines: [ newLine() ]
+      });
       i++;
       continue;
     }
@@ -1728,8 +1808,8 @@ async function loadFromFolder(fileHandle){
     if(!state.sections || state.sections.length === 0) state.sections = [ newSection() ];
     state.sections = normalizeSections(state.sections);
     state.sections.forEach(function(sec){
-      sec.numeral = formatNumeral(sec.numeral, sec.repeatOnly);
-      if(!sec.repeatOnly && sec.lines){
+      if(!sec.repeatOnly){
+        sec.numeral = formatNumeral(sec.numeral, false);
         sec.lines.forEach(function(lineObj){
           lineObj.pairs.forEach(function(pair){ pair.chord = formatChordFinal(pair.chord); });
         });
@@ -1833,8 +1913,8 @@ async function loadSong(id){
     if(!state.sections || state.sections.length === 0) state.sections = [newSection()];
     state.sections = normalizeSections(state.sections);
     state.sections.forEach(function(sec){
-      sec.numeral = formatNumeral(sec.numeral, sec.repeatOnly);
-      if(!sec.repeatOnly && sec.lines){
+      if(!sec.repeatOnly){
+        sec.numeral = formatNumeral(sec.numeral, false);
         sec.lines.forEach(function(lineObj){
           lineObj.pairs.forEach(function(pair){ pair.chord = formatChordFinal(pair.chord); });
         });
