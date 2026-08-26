@@ -6,7 +6,7 @@ layout: default
   <h1 class="song-title">{{ page.title }}</h1>
   <p class="song-meta">Notebook {{ page.notebook }} &middot; Page {{ page.page }}</p>
   <p class="legend-inline">{% for item in site.section_legend %}<span><strong>{{ item.numeral }}</strong> {{ item.name }}</span>{% unless forloop.last %} · {% endunless %}{% endfor %}</p>
-  <div class="chord-block">
+  <div class="chord-block" data-section-legend="{% for item in site.section_legend %}{{ item.numeral }}:{{ item.name }}{% unless forloop.last %}|{% endunless %}{% endfor %}">
     {{ content }}
   </div>
   <script src="{{ '/assets/js/chord-display.js' | relative_url }}"></script>
