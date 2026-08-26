@@ -513,7 +513,7 @@ function alignLine(pairs){
   const sepBeat  = '     '; // same 5-char width as sepChord
   cleaned.forEach(p=>{
     const beat = (p.beat||'').trim();
-    const chord = (p.chord||'').trim();
+    const chord = formatChord((p.chord||'').trim());
     const width = Math.max(beat.length, chord.length, 1);
     beatCells.push(padCenter(beat, width));
     chordCells.push(padRight(chord, width));
@@ -532,7 +532,7 @@ function buildOutput(){
   const fm = `---\ntitle: "${title}"\nnotebook: ${notebook || '""'}\npage: ${page || '""'}\n---`;
 
   const body = state.sections.map(sec=>{
-    const numeral = sec.numeral.trim() || '?';
+    const numeral = formatNumeral(sec.numeral.trim(), sec.repeatOnly) || '?';
     if(sec.repeatOnly){ return numeral; }
     const rendered = sec.lines.map(alignLine).filter(Boolean).map(l => `${l.beats}\n${l.chords}`);
     if(rendered.length === 0) return numeral;
@@ -589,7 +589,10 @@ function renderSections(){
 
     // wire events for this block
     head.querySelector('[data-role=numeral]').addEventListener('input', e=>{
-      sec.numeral = e.target.value; renderPreview();
+      var formatted = formatNumeral(e.target.value, sec.repeatOnly);
+      if(formatted !== e.target.value) e.target.value = formatted;
+      sec.numeral = formatted;
+      renderPreview();
     });
     head.querySelector('[data-role=repeat]').addEventListener('change', e=>{
       sec.repeatOnly = e.target.checked; renderSections(); renderPreview();
@@ -628,7 +631,10 @@ function renderPairLine(i, j, line){
       pair.beat = e.target.value; renderPreview();
     });
     pairEl.querySelector('[data-role=chord]').addEventListener('input', e=>{
-      pair.chord = e.target.value; renderPreview();
+      var formatted = formatChord(e.target.value);
+      if(formatted !== e.target.value) e.target.value = formatted;
+      pair.chord = formatted;
+      renderPreview();
     });
     pairEl.querySelector('[data-role=remove-pair]').addEventListener('click', ()=>{
       line.splice(k,1); renderSections(); renderPreview();
@@ -661,6 +667,30 @@ function renderPairLine(i, j, line){
 
 function escapeAttr(str){
   return (str||'').replace(/"/g,'&quot;');
+}
+
+function formatSectionNumeral(value){
+  var v = (value || '').trim();
+  if(/^[IVXLCivxlc]+$/.test(v)) return v.toUpperCase();
+  return value;
+}
+
+function formatRepeatLine(value){
+  if(!(value || '').trim()) return value;
+  return value.split(/\s*-\s*/).map(function(part){
+    return part.trim().replace(/([IVXLCivxlc]+)/g, function(m){ return m.toUpperCase(); });
+  }).join(' - ');
+}
+
+function formatNumeral(value, repeatOnly){
+  return repeatOnly ? formatRepeatLine(value) : formatSectionNumeral(value);
+}
+
+function formatChord(value){
+  var s = (value || '').trim();
+  if(!s) return '';
+  if(/^[A-Ga-g]$/.test(s)) return s.toUpperCase();
+  return s.toLowerCase();
 }
 
 function slugify(title){
@@ -936,6 +966,14 @@ async function loadFromFolder(fileHandle){
     var text = await file.text();
     state = parseMarkdown(text);
     if(!state.sections || state.sections.length === 0) state.sections = [ newSection() ];
+    state.sections.forEach(function(sec){
+      sec.numeral = formatNumeral(sec.numeral, sec.repeatOnly);
+      if(!sec.repeatOnly && sec.lines){
+        sec.lines.forEach(function(line){
+          line.forEach(function(pair){ pair.chord = formatChord(pair.chord); });
+        });
+      }
+    });
     document.getElementById('f-title').value = state.title || '';
     document.getElementById('f-notebook').value = state.notebook || '';
     document.getElementById('f-page').value = state.page || '';
@@ -1032,6 +1070,14 @@ async function loadSong(id){
     if(!result) return;
     state = JSON.parse(result.value);
     if(!state.sections || state.sections.length === 0) state.sections = [newSection()];
+    state.sections.forEach(function(sec){
+      sec.numeral = formatNumeral(sec.numeral, sec.repeatOnly);
+      if(!sec.repeatOnly && sec.lines){
+        sec.lines.forEach(function(line){
+          line.forEach(function(pair){ pair.chord = formatChord(pair.chord); });
+        });
+      }
+    });
     document.getElementById('f-title').value = state.title || '';
     document.getElementById('f-notebook').value = state.notebook || '';
     document.getElementById('f-page').value = state.page || '';
