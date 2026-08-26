@@ -109,10 +109,21 @@ permalink: /builder/
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.85fr);
     gap: 20px;
-    align-items: start;
+    align-items: stretch;
   }
   @media (max-width: 1099px){
+    .grid{
+      grid-template-columns: 1fr 1fr;
+    }
+    .col-form{ grid-column: 1 / -1; }
+    .col-preview{ grid-column: 1; }
+    .col-tools{ grid-column: 2; }
+  }
+  @media (max-width: 767px){
     .grid{ grid-template-columns: 1fr; }
+    .col-form,
+    .col-preview,
+    .col-tools{ grid-column: auto; }
   }
 
   @media (min-width: 1100px){
@@ -129,9 +140,26 @@ permalink: /builder/
       overflow-y: auto;
     }
   }
+  @media (min-width: 768px) and (max-width: 1099px){
+    .preview-panel{
+      position: sticky;
+      top: 16px;
+      z-index: 5;
+    }
+    .col-tools{
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+    }
+  }
   .preview-panel pre.output{
     max-height: min(72vh, 640px);
     overflow: auto;
+  }
+  .col-preview{
+    min-width: 0;
   }
 
   .card{
