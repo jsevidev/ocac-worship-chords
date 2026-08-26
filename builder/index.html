@@ -162,6 +162,95 @@ permalink: /builder/
     min-width: 0;
   }
 
+  /* Scroll: hide default bars; show thin on hover/scroll + edge fades when more content */
+  html{
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ink-soft) 28%, transparent) transparent;
+  }
+  html::-webkit-scrollbar{ width: 8px; height: 8px; }
+  html::-webkit-scrollbar-track{ background: transparent; }
+  html::-webkit-scrollbar-thumb{
+    background: color-mix(in srgb, var(--ink-soft) 24%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  html::-webkit-scrollbar-thumb:hover{
+    background: color-mix(in srgb, var(--ink-soft) 42%, transparent);
+    background-clip: padding-box;
+  }
+  .scroll-hint{
+    position: relative;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scroll-hint::-webkit-scrollbar{ width: 0; height: 0; }
+  .scroll-hint:hover,
+  .scroll-hint:focus-within,
+  .scroll-hint.is-scrolling{
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in srgb, var(--ink-soft) 38%, transparent) transparent;
+  }
+  .scroll-hint:hover::-webkit-scrollbar,
+  .scroll-hint:focus-within::-webkit-scrollbar,
+  .scroll-hint.is-scrolling::-webkit-scrollbar{ width: 5px; height: 5px; }
+  .scroll-hint:hover::-webkit-scrollbar-track,
+  .scroll-hint:focus-within::-webkit-scrollbar-track,
+  .scroll-hint.is-scrolling::-webkit-scrollbar-track{ background: transparent; }
+  .scroll-hint:hover::-webkit-scrollbar-thumb,
+  .scroll-hint:focus-within::-webkit-scrollbar-thumb,
+  .scroll-hint.is-scrolling::-webkit-scrollbar-thumb{
+    background: color-mix(in srgb, var(--ink-soft) 34%, transparent);
+    border-radius: 999px;
+  }
+  .scroll-hint--output:hover,
+  .scroll-hint--output:focus-within,
+  .scroll-hint--output.is-scrolling{
+    scrollbar-color: color-mix(in srgb, var(--output-fg) 28%, transparent) transparent;
+  }
+  .scroll-hint--output:hover::-webkit-scrollbar-thumb,
+  .scroll-hint--output:focus-within::-webkit-scrollbar-thumb,
+  .scroll-hint--output.is-scrolling::-webkit-scrollbar-thumb{
+    background: color-mix(in srgb, var(--output-fg) 24%, transparent);
+  }
+  .scroll-hint::before,
+  .scroll-hint::after{
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 26px;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity .2s ease;
+    z-index: 2;
+  }
+  .scroll-hint::before{
+    top: 0;
+    background: linear-gradient(to bottom, var(--scroll-fade, var(--paper)), transparent);
+  }
+  .scroll-hint::after{
+    bottom: 0;
+    background: linear-gradient(to top, var(--scroll-fade, var(--paper)), transparent);
+  }
+  .scroll-hint.can-scroll-up::before,
+  .scroll-hint.can-scroll-down::after{ opacity: 1; }
+  .scroll-hint--paper{ --scroll-fade: var(--paper); }
+  .scroll-hint--output{ --scroll-fade: var(--output-bg); }
+  .scroll-hint--output::after{ border-radius: 0 0 8px 8px; }
+  .scroll-hint--output.can-scroll-right{
+    box-shadow: inset -20px 0 16px -12px color-mix(in srgb, var(--output-bg) 88%, var(--output-fg));
+  }
+  .scroll-hint--output.can-scroll-left{
+    box-shadow: inset 20px 0 16px -12px color-mix(in srgb, var(--output-bg) 88%, var(--output-fg));
+  }
+  .scroll-hint--output.can-scroll-left.can-scroll-right{
+    box-shadow:
+      inset 20px 0 16px -12px color-mix(in srgb, var(--output-bg) 88%, var(--output-fg)),
+      inset -20px 0 16px -12px color-mix(in srgb, var(--output-bg) 88%, var(--output-fg));
+  }
+
   .card{
     background: var(--surface);
     border: 1px solid var(--paper-rule);
@@ -261,11 +350,98 @@ permalink: /builder/
     padding-top: 10px;
     border-top: 1px dashed var(--paper-rule);
   }
-  .repeat-part input[data-role=repeat-label]{
-    width: 72px;
+  .repeat-part .section-picker{
+    position: relative;
+    width: 96px;
+    flex: none;
+  }
+  .repeat-part .section-picker input{
+    width: 100%;
+    padding-right: 22px;
     text-align: center;
     font-weight: 600;
   }
+  .section-picker-toggle{
+    position: absolute;
+    right: 3px;
+    bottom: 3px;
+    width: 20px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-radius: 4px;
+    font-size: 11px;
+    line-height: 1;
+    padding: 0;
+  }
+  .section-picker-toggle:hover,
+  .section-picker-toggle:focus-visible{
+    background: var(--brass-soft);
+    color: var(--brass);
+    outline: none;
+  }
+  .section-picker-menu{
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    min-width: 196px;
+    max-width: 260px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--surface);
+    border: 1px solid var(--paper-rule);
+    border-radius: 10px;
+    box-shadow: 0 10px 28px rgba(30, 42, 56, 0.14);
+    z-index: 30;
+    padding: 6px 0;
+  }
+  .section-picker-menu[hidden]{ display: none; }
+  .section-picker-group-label{
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--ink-soft);
+    padding: 8px 12px 4px;
+  }
+  .section-picker-option{
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font-family: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .section-picker-option:hover,
+  .section-picker-option.is-active{
+    background: var(--brass-soft);
+  }
+  .section-picker-option .pick-value{
+    font-family: 'Lora', serif;
+    font-weight: 700;
+    color: var(--brass);
+    min-width: 1.5em;
+  }
+  .section-picker-option .pick-hint{
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .section-picker-empty{
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-style: italic;
+    line-height: 1.4;
+  }
+  .scroll-hint--surface{ --scroll-fade: var(--surface); }
   .repeat-hint{
     margin: 4px 0 0;
     font-size: 12px;
@@ -303,6 +479,7 @@ permalink: /builder/
   .row-actions .repeat-count{ width: 56px; flex: none; }
   .row-actions .repeat-count input{ width: 100%; text-align: center; }
   .toolbar{ display:flex; gap:8px; flex-wrap: wrap; margin-top: 6px; }
+  #add-section{ margin-top: 16px; }
 
   pre.output{
     font-family: 'JetBrains Mono', monospace;
@@ -554,7 +731,7 @@ permalink: /builder/
     <div class="col-preview">
       <div class="card preview-panel">
         <h2>Preview (this is what gets saved)</h2>
-        <pre class="output" id="preview"></pre>
+        <pre class="output scroll-hint scroll-hint--output" id="preview"></pre>
         <div class="output-actions">
           <button class="btn-ghost btn-sm" id="copy-output">Copy text</button>
           <button class="btn-brass btn-sm" id="download-md">Save .md</button>
@@ -567,7 +744,7 @@ permalink: /builder/
     </div>
 
     <!-- COL 3: SAVED / PUBLISH / DRAFTS -->
-    <div class="col-tools">
+    <div class="col-tools scroll-hint scroll-hint--paper">
       <div class="card">
         <h2>Songs in _songs</h2>
         <p class="empty-note" id="folder-songs-empty">Finished .md files saved to your linked folder. These are what the website reads.</p>
@@ -614,7 +791,6 @@ permalink: /builder/
   </div>
 </div>
 <div class="toast-stack" id="toast-stack"></div>
-<datalist id="repeat-section-options"></datalist>
 
 <script id="repo-config" type="application/json">
 {
@@ -1097,7 +1273,7 @@ function alignLine(pairs, repeatCount){
 }
 
 function buildOutput(){
-  const title = document.getElementById('f-title').value.trim() || 'Untitled Song';
+  const title = capitalizeFirstLetter(document.getElementById('f-title').value.trim()) || 'Untitled Song';
   const notebook = document.getElementById('f-notebook').value.trim();
   const page = document.getElementById('f-page').value.trim();
 
@@ -1129,6 +1305,51 @@ function buildOutput(){
 
 function renderPreview(){
   document.getElementById('preview').textContent = buildOutput();
+  refreshScrollHints();
+}
+
+var scrollHintTimers = new WeakMap();
+
+function updateScrollHints(el){
+  if(!el) return;
+  var edge = 4;
+  var sl = el.scrollLeft;
+  var st = el.scrollTop;
+  var maxL = el.scrollWidth - el.clientWidth;
+  var maxT = el.scrollHeight - el.clientHeight;
+  el.classList.toggle('can-scroll-left', sl > edge);
+  el.classList.toggle('can-scroll-right', maxL - sl > edge);
+  el.classList.toggle('can-scroll-up', st > edge);
+  el.classList.toggle('can-scroll-down', maxT - st > edge);
+}
+
+function bindScrollHint(el){
+  if(!el || el.dataset.scrollHintBound) return;
+  el.dataset.scrollHintBound = '1';
+  function refresh(){ updateScrollHints(el); }
+  function onScroll(){
+    el.classList.add('is-scrolling');
+    clearTimeout(scrollHintTimers.get(el));
+    scrollHintTimers.set(el, setTimeout(function(){
+      el.classList.remove('is-scrolling');
+    }, 900));
+    refresh();
+  }
+  el.addEventListener('scroll', onScroll, { passive: true });
+  if(typeof ResizeObserver !== 'undefined'){
+    new ResizeObserver(refresh).observe(el);
+  }
+  window.addEventListener('resize', refresh);
+  refresh();
+}
+
+function initScrollHints(){
+  bindScrollHint(document.querySelector('.col-tools'));
+  bindScrollHint(document.getElementById('preview'));
+}
+
+function refreshScrollHints(){
+  document.querySelectorAll('.scroll-hint').forEach(updateScrollHints);
 }
 
 function renderSections(){
@@ -1252,15 +1473,20 @@ function renderSections(){
 function getRepeatSectionSuggestions(){
   var seen = {};
   var items = [];
-  function add(value, label){
+  function add(value, opts){
+    opts = opts || {};
     var key = value.toLowerCase();
     if(!value || seen[key]) return;
     seen[key] = true;
-    items.push({ value: value, label: label || value });
+    items.push({
+      value: value,
+      label: opts.label || value,
+      inSong: !!opts.inSong
+    });
   }
   state.sections.forEach(function(sec){
     if(!sec.repeatOnly && sec.numeral && sec.numeral.trim()){
-      add(sec.numeral.trim(), sec.numeral.trim() + ' (in this song)');
+      add(sec.numeral.trim(), { inSong: true, label: sec.numeral.trim() + ' (in this song)' });
     }
   });
   ['I','II','III','IV','V','VI','VII','VIII'].forEach(function(n){
@@ -1269,15 +1495,113 @@ function getRepeatSectionSuggestions(){
   return items;
 }
 
+var activeSectionPicker = null;
+
+function closeSectionPickerMenu(){
+  if(!activeSectionPicker) return;
+  activeSectionPicker.menu.hidden = true;
+  activeSectionPicker = null;
+}
+
+function renderSectionPickerMenu(picker, filter){
+  var menu = picker.menu;
+  menu.innerHTML = '';
+  var q = (filter || '').trim().toLowerCase();
+  var filtered = getRepeatSectionSuggestions().filter(function(item){
+    if(!q) return true;
+    return item.value.toLowerCase().indexOf(q) !== -1 ||
+      (item.label || '').toLowerCase().indexOf(q) !== -1;
+  });
+  var songItems = filtered.filter(function(item){ return item.inSong; });
+  var commonItems = filtered.filter(function(item){ return !item.inSong; });
+
+  function addGroup(label, groupItems){
+    if(!groupItems.length) return;
+    if(label){
+      var groupLabel = document.createElement('div');
+      groupLabel.className = 'section-picker-group-label';
+      groupLabel.textContent = label;
+      menu.appendChild(groupLabel);
+    }
+    groupItems.forEach(function(item){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'section-picker-option';
+      if(item.inSong){
+        btn.innerHTML = '<span class="pick-value">' + escapeHtml(item.value) + '</span><span class="pick-hint">in this song</span>';
+      }else{
+        btn.innerHTML = '<span class="pick-value">' + escapeHtml(item.value) + '</span>';
+      }
+      btn.addEventListener('mousedown', function(e){
+        e.preventDefault();
+        picker.input.value = item.value;
+        picker.onSelect(item.value);
+        closeSectionPickerMenu();
+      });
+      menu.appendChild(btn);
+    });
+  }
+
+  addGroup(songItems.length ? 'In this song' : '', songItems);
+  addGroup(songItems.length && commonItems.length ? 'Quick pick' : commonItems.length ? 'Sections' : '', commonItems);
+
+  if(!filtered.length){
+    var empty = document.createElement('div');
+    empty.className = 'section-picker-empty';
+    empty.textContent = q ? 'No matches — type your own label' : 'Add chord sections above first';
+    menu.appendChild(empty);
+  }
+
+  refreshScrollHints();
+}
+
+function bindSectionPicker(wrap, input, onSelect){
+  var toggle = wrap.querySelector('.section-picker-toggle');
+  var menu = wrap.querySelector('.section-picker-menu');
+  var picker = { wrap: wrap, input: input, menu: menu, onSelect: onSelect };
+
+  function openMenu(){
+    closeSectionPickerMenu();
+    renderSectionPickerMenu(picker, input.value);
+    menu.hidden = false;
+    activeSectionPicker = picker;
+    bindScrollHint(menu);
+  }
+
+  toggle.addEventListener('click', function(e){
+    e.preventDefault();
+    if(menu.hidden){
+      input.focus();
+      openMenu();
+    }else{
+      closeSectionPickerMenu();
+    }
+  });
+
+  input.addEventListener('focus', openMenu);
+  input.addEventListener('input', function(){
+    onSelect(input.value, { fromInput: true });
+    renderSectionPickerMenu(picker, input.value);
+    if(menu.hidden) openMenu();
+  });
+  input.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') closeSectionPickerMenu();
+  });
+}
+
+document.addEventListener('mousedown', function(e){
+  if(activeSectionPicker && !activeSectionPicker.wrap.contains(e.target)){
+    closeSectionPickerMenu();
+  }
+});
+
 function updateRepeatSectionDatalist(){
-  var dl = document.getElementById('repeat-section-options');
-  if(!dl) return;
-  dl.innerHTML = '';
-  getRepeatSectionSuggestions().forEach(function(item){
-    var opt = document.createElement('option');
-    opt.value = item.value;
-    if(item.label !== item.value) opt.label = item.label;
-    dl.appendChild(opt);
+  document.querySelectorAll('.section-picker-menu:not([hidden])').forEach(function(menu){
+    var wrap = menu.closest('.section-picker');
+    if(!wrap) return;
+    var input = wrap.querySelector('[data-role=repeat-label]');
+    var picker = { menu: menu, input: input, onSelect: function(){} };
+    renderSectionPickerMenu(picker, input ? input.value : '');
   });
 }
 
@@ -1317,7 +1641,11 @@ function renderRepeatPartsLine(i, sec){
     partEl.innerHTML = `
       <div>
         <span class="lbl">Section</span>
-        <input type="text" data-role="repeat-label" list="repeat-section-options" value="${escapeAttr(part.label)}" placeholder="e.g. I">
+        <div class="section-picker">
+          <input type="text" data-role="repeat-label" value="${escapeAttr(part.label)}" placeholder="e.g. I" autocomplete="off">
+          <button type="button" class="section-picker-toggle" tabindex="-1" aria-label="Show section options">&#9662;</button>
+          <div class="section-picker-menu scroll-hint scroll-hint--surface" hidden></div>
+        </div>
       </div>
       <div class="repeat-count">
         <span class="lbl">Repeat</span>
@@ -1326,12 +1654,18 @@ function renderRepeatPartsLine(i, sec){
       <button class="btn-danger btn-sm" data-role="remove-repeat-part" title="Remove section">&times;</button>
       <button class="btn-ghost btn-sm" data-role="insert-repeat-after" title="Insert section after this">+ After</button>
     `;
-    partEl.querySelector('[data-role=repeat-label]').addEventListener('input', function(e){
-      var formatted = formatRepeatPartLabel(e.target.value);
-      if(formatted !== e.target.value) e.target.value = formatted;
+    var labelInput = partEl.querySelector('[data-role=repeat-label]');
+    function applyRepeatLabel(value, opts){
+      opts = opts || {};
+      var formatted = formatRepeatPartLabel(value);
+      if(!opts.fromInput || formatted !== labelInput.value) labelInput.value = formatted;
       part.label = formatted;
       sec.numeral = serializeRepeatParts(sec.repeatParts);
       renderPreview();
+    }
+    bindSectionPicker(partEl.querySelector('.section-picker'), labelInput, applyRepeatLabel);
+    labelInput.addEventListener('blur', function(){
+      applyRepeatLabel(labelInput.value);
     });
     bindRepeatCountInput(partEl.querySelector('[data-role=repeat-part-count]'), function(v){
       part.repeatCount = v;
@@ -1439,6 +1773,10 @@ function renderPairLine(i, j, lineObj){
 
 function escapeAttr(str){
   return (str||'').replace(/"/g,'&quot;');
+}
+
+function escapeHtml(str){
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function formatSectionNumeral(value){
@@ -1562,8 +1900,31 @@ function slugify(title){
     .replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'untitled';
 }
 
+function capitalizeFirstLetter(str){
+  if(!str) return str;
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
+function applyTitleCapitalization(input){
+  var val = input.value;
+  var capped = capitalizeFirstLetter(val);
+  if(val === capped) return;
+  var pos = input.selectionStart;
+  input.value = capped;
+  input.setSelectionRange(Math.max(pos, 1), Math.max(pos, 1));
+}
+
 // ---- top-level field bindings ----
-['f-title','f-notebook','f-page'].forEach(id=>{
+var titleInput = document.getElementById('f-title');
+titleInput.addEventListener('input', function(){
+  applyTitleCapitalization(titleInput);
+  renderPreview();
+});
+titleInput.addEventListener('blur', function(){
+  applyTitleCapitalization(titleInput);
+});
+
+['f-notebook','f-page'].forEach(id=>{
   document.getElementById(id).addEventListener('input', renderPreview);
 });
 
@@ -1882,7 +2243,7 @@ async function loadFromFolder(fileHandle){
         });
       }
     });
-    document.getElementById('f-title').value = state.title || '';
+    document.getElementById('f-title').value = capitalizeFirstLetter(state.title || '');
     document.getElementById('f-notebook').value = state.notebook || '';
     document.getElementById('f-page').value = state.page || '';
     renderSections();
@@ -1956,7 +2317,7 @@ async function renderFolderSongs(){
 }
 
 async function saveSong(){
-  state.title = document.getElementById('f-title').value.trim();
+  state.title = capitalizeFirstLetter(document.getElementById('f-title').value.trim());
   state.notebook = document.getElementById('f-notebook').value.trim();
   state.page = document.getElementById('f-page').value.trim();
   if(!state.title){ flashStatus('Add a title first', 'error'); return; }
@@ -1987,7 +2348,7 @@ async function loadSong(id){
         });
       }
     });
-    document.getElementById('f-title').value = state.title || '';
+    document.getElementById('f-title').value = capitalizeFirstLetter(state.title || '');
     document.getElementById('f-notebook').value = state.notebook || '';
     document.getElementById('f-page').value = state.page || '';
     renderSections();
@@ -2071,6 +2432,7 @@ renderSections();
 renderSavedList();
 initSaveFolder();
 initGithubPublish();
+initScrollHints();
 
 (function () {
   var btn = document.getElementById('theme-toggle');

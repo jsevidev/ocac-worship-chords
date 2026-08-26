@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if (!rendered) return;
 
   block.innerHTML = rendered;
+  document.dispatchEvent(new CustomEvent('chord-sheet-rendered'));
 });
 
 function escapeHtml(str) {
@@ -95,10 +96,12 @@ function renderRow(row) {
   var pairs = row.pairs || row;
   var repeat = row.repeat || '';
   var html = '<div class="chord-row-wrap">';
-  html += '<div class="chord-row">';
+  html += '<div class="chord-row" style="--chord-count:' + pairs.length + '">';
   pairs.forEach(function (pair, i) {
+    html += '<div class="chord-unit">';
     if (i > 0) html += '<span class="chord-sep">-</span>';
     html += '<div class="chord-pair"><span class="beat">' + pair.beat + '</span><span class="chord">' + pair.chord + '</span></div>';
+    html += '</div>';
   });
   html += '</div>';
   if (repeat) {
