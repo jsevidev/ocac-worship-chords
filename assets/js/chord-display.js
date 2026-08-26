@@ -64,11 +64,22 @@ function parseBeatChordLines(beatLine, chordLine) {
   return { pairs: pairs, repeat: lineRepeat };
 }
 
+function isRepeatPart(part) {
+  part = (part || '').trim();
+  if (!part) return false;
+  if (/^[IVXLCivxlc]+(\s*\(\s*\d+\s*x\s*\)|\s+\d+x)?$/i.test(part)) return true;
+  if (/^[^\d(][^()]*(\s*\(\s*\d+\s*x\s*\))?$/i.test(part)) return true;
+  return false;
+}
+
 function isRepeatLine(line) {
   line = line.trim();
   if (!line || isBeatLine(line)) return false;
   if (isNumeral(line)) return true;
-  return /^([IVXLCivxlc]+(\s+\d+x)?)(\s*-\s*[IVXLCivxlc]+(\s+\d+x)?)*$/i.test(line);
+  if (parseSectionHeader(line)) return false;
+  if (line.indexOf(' - ') === -1) return false;
+  var parts = line.split(/\s*-\s*/);
+  return parts.length >= 2 && parts.every(isRepeatPart);
 }
 
 function renderRow(row) {

@@ -232,6 +232,21 @@ permalink: /builder/
   }
   .section-head{ display:flex; gap:10px; align-items: flex-end; margin-bottom: 10px; }
   .section-head .numeral{ width: 90px; flex: none; }
+  .section-head .numeral.repeat-line-field{ width: auto; flex: 1; min-width: 0; }
+  .repeat-line-row{ display: flex; gap: 6px; align-items: center; }
+  .repeat-line-row input{ flex: 1; min-width: 0; }
+  .repeat-line-row select{
+    flex: none;
+    font-family: 'Inter', sans-serif;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 8px 10px;
+    border: 1px solid var(--paper-rule);
+    border-radius: 6px;
+    background: var(--surface-alt);
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
   .section-head .repeat-count{ width: 56px; flex: none; }
   .checkbox-row{ display:flex; align-items:center; gap:6px; font-size:13px; color: var(--ink-soft); margin-bottom: 2px; }
   .checkbox-row input{ width:auto; }
@@ -470,6 +485,7 @@ permalink: /builder/
         <li><strong>Save .md</strong> &mdash; the real song file for <strong>_songs/</strong>. Commit and push to publish on the site.</li>
         <li><strong>Section repeat</strong> &mdash; use the section <strong>Repeat</strong> field (e.g. <strong>2x</strong>) to play that whole section twice. Saved as <strong>III 2x</strong>.</li>
         <li><strong>Line repeat</strong> &mdash; use <strong>Repeat</strong> on a chord line to play that sequence again (e.g. E-A three times saves as <strong>E - A - 3x</strong>, then continue with the next line).</li>
+        <li><strong>Repeat line</strong> &mdash; check <strong>Repeat instruction only</strong> and enter flow like <strong>I (2x) - II</strong> or <strong>II - III 2x</strong>. Pick sections from the dropdown or type custom labels (e.g. Intro).</li>
         <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>Am/G</strong>, etc.).</li>
       </ul>
     </div>
@@ -574,6 +590,7 @@ permalink: /builder/
   </div>
 </div>
 <div class="toast-stack" id="toast-stack"></div>
+<datalist id="repeat-section-options"></datalist>
 
 <script id="repo-config" type="application/json">
 {
@@ -583,10 +600,12 @@ permalink: /builder/
   "songsPath": {{ site.publish.songs_path | jsonify }}
 }
 </script>
+<script id="section-legend" type="application/json">{{ site.section_legend | jsonify }}</script>
 
 <script>
 let state = { id: null, title:'', notebook:'', page:'', sections: [] };
 let repoConfig = JSON.parse(document.getElementById('repo-config').textContent);
+let sectionLegend = JSON.parse(document.getElementById('section-legend').textContent);
 let pendingSongs = [];
 const GITHUB_TOKEN_KEY = 'ocac-github-token';
 
@@ -1085,11 +1104,22 @@ function renderSections(){
 
     const head = document.createElement('div');
     head.className = 'section-head';
+    var repeatLineField = sec.repeatOnly
+      ? `<div class="numeral repeat-line-field" style="flex:1">
+          <label>Repeat line</label>
+          <div class="repeat-line-row">
+            <input type="text" data-role="numeral" list="repeat-section-options" value="${escapeAttr(sec.numeral)}" placeholder="e.g. I (2x) - II">
+            <select data-role="repeat-pick" title="Insert a section from this song">
+              <option value="">+ Section</option>
+            </select>
+          </div>
+        </div>`
+      : `<div class="numeral" style="">
+          <label>Numeral</label>
+          <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="e.g. I">
+        </div>`;
     head.innerHTML = `
-      <div class="numeral" style="${sec.repeatOnly ? 'flex:1' : ''}">
-        <label>${sec.repeatOnly ? 'Repeat line' : 'Numeral'}</label>
-        <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="${sec.repeatOnly ? 'e.g. II - III 2x' : 'e.g. I'}">
-      </div>
+      ${repeatLineField}
       ${sec.repeatOnly ? '' : `
       <div class="repeat-count">
         <label>Repeat</label>
@@ -1098,7 +1128,7 @@ function renderSections(){
       <div style="flex:1">
         <div class="checkbox-row">
           <input type="checkbox" data-role="repeat" ${sec.repeatOnly ? 'checked' : ''}>
-          Repeat instruction only (e.g. I or II - III 2x)
+          Repeat instruction only (e.g. I (2x) - II or II - III 2x)
         </div>
       </div>
       <button class="btn-danger btn-sm" data-role="remove-section">Remove</button>
@@ -1129,6 +1159,22 @@ function renderSections(){
       sec.numeral = formatted;
       renderPreview();
     });
+    var repeatPick = head.querySelector('[data-role=repeat-pick]');
+    if(repeatPick){
+      fillRepeatSectionPicker(repeatPick);
+      repeatPick.addEventListener('change', function(e){
+        var val = e.target.value;
+        if(!val) return;
+        var input = head.querySelector('[data-role=numeral]');
+        var cur = input.value.trim();
+        input.value = cur ? cur + ' - ' + val : val;
+        var formatted = formatNumeral(input.value, true);
+        input.value = formatted;
+        sec.numeral = formatted;
+        e.target.value = '';
+        renderPreview();
+      });
+    }
     var repeatCountEl = head.querySelector('[data-role=repeat-count]');
     if(repeatCountEl) bindRepeatCountInput(repeatCountEl, function(v){ sec.repeatCount = v; });
     head.querySelector('[data-role=repeat]').addEventListener('change', e=>{
@@ -1143,7 +1189,51 @@ function renderSections(){
       });
     }
   });
+  updateRepeatSectionDatalist();
   renderPreview();
+}
+
+function getRepeatSectionSuggestions(){
+  var seen = {};
+  var items = [];
+  function add(value, label){
+    var key = value.toLowerCase();
+    if(!value || seen[key]) return;
+    seen[key] = true;
+    items.push({ value: value, label: label || value });
+  }
+  (sectionLegend || []).forEach(function(item){
+    add(item.numeral, item.numeral + ' · ' + item.name);
+    add(item.name, item.name + ' (' + item.numeral + ')');
+  });
+  state.sections.forEach(function(sec){
+    if(!sec.repeatOnly && sec.numeral && sec.numeral.trim()){
+      add(sec.numeral.trim());
+    }
+  });
+  return items;
+}
+
+function updateRepeatSectionDatalist(){
+  var dl = document.getElementById('repeat-section-options');
+  if(!dl) return;
+  dl.innerHTML = '';
+  getRepeatSectionSuggestions().forEach(function(item){
+    var opt = document.createElement('option');
+    opt.value = item.value;
+    if(item.label !== item.value) opt.label = item.label;
+    dl.appendChild(opt);
+  });
+}
+
+function fillRepeatSectionPicker(selectEl){
+  selectEl.innerHTML = '<option value="">+ Section</option>';
+  getRepeatSectionSuggestions().forEach(function(item){
+    var opt = document.createElement('option');
+    opt.value = item.value;
+    opt.textContent = item.label;
+    selectEl.appendChild(opt);
+  });
 }
 
 function renderPairLine(i, j, lineObj){
@@ -1230,11 +1320,29 @@ function formatSectionNumeral(value){
   return value;
 }
 
+function formatRepeatPart(part){
+  part = (part || '').trim();
+  if(!part) return part;
+  var parenMatch = part.match(/^(.+?)\s*\(\s*(\d+)\s*x\s*\)\s*$/i);
+  if(parenMatch){
+    return formatRepeatPartLabel(parenMatch[1]) + ' (' + parenMatch[2] + 'x)';
+  }
+  var suffixMatch = part.match(/^(.+?)\s+(\d+)x\s*$/i);
+  if(suffixMatch){
+    return formatRepeatPartLabel(suffixMatch[1]) + ' (' + suffixMatch[2] + 'x)';
+  }
+  return formatRepeatPartLabel(part);
+}
+
+function formatRepeatPartLabel(label){
+  label = (label || '').trim();
+  if(/^[IVXLCivxlc]+$/.test(label)) return label.toUpperCase();
+  return label;
+}
+
 function formatRepeatLine(value){
   if(!(value || '').trim()) return value;
-  return value.split(/\s*-\s*/).map(function(part){
-    return part.trim().replace(/([IVXLCivxlc]+)/g, function(m){ return m.toUpperCase(); });
-  }).join(' - ');
+  return value.split(/\s*-\s*/).map(formatRepeatPart).join(' - ');
 }
 
 function formatNumeral(value, repeatOnly){
@@ -1531,11 +1639,21 @@ function parseBeatChordLines(beatLine, chordLine){
   var pairs = beats.map(function(b, idx){ return { beat: b, chord: chords[idx] || '' }; });
   return { pairs: pairs, repeatCount: lineRepeat };
 }
+function parseIsRepeatPart(part){
+  part = (part || '').trim();
+  if(!part) return false;
+  if(/^[IVXLCivxlc]+(\s*\(\s*\d+\s*x\s*\)|\s+\d+x)?$/i.test(part)) return true;
+  if(/^[^\d(][^()]*(\s*\(\s*\d+\s*x\s*\))?$/i.test(part)) return true;
+  return false;
+}
 function parseIsRepeatLine(line){
   line = line.trim();
   if(!line || parseIsBeatLine(line)) return false;
   if(parseIsNumeral(line)) return true;
-  return /^([IVXLCivxlc]+(\s+\d+x)?)(\s*-\s*[IVXLCivxlc]+(\s+\d+x)?)*$/i.test(line);
+  if(parseSectionHeader(line)) return false;
+  if(line.indexOf(' - ') === -1) return false;
+  var parts = line.split(/\s*-\s*/);
+  return parts.length >= 2 && parts.every(parseIsRepeatPart);
 }
 
 function parseChordBody(text){
