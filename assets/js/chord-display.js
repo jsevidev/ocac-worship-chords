@@ -66,7 +66,7 @@ function renderRow(pairs) {
 }
 
 function renderRepeatFlow(text) {
-  return '<div class="repeat-flow">' + text + '</div>';
+  return '<div class="repeat-flow"><span class="repeat-tag">Repeat</span><span class="repeat-text">' + text + '</span></div>';
 }
 
 function parseSong(text) {
@@ -136,9 +136,11 @@ function renderChordBlock(text, legend) {
     }
 
     var sectionName = legend[part.numeral] || legend[part.numeral.toUpperCase()];
-    var label = sectionName ? part.numeral + ' \u00b7 ' + sectionName : part.numeral;
+    var labelHtml = sectionName
+      ? '<span class="section-numeral">' + part.numeral + '</span><span class="section-name">' + sectionName + '</span>'
+      : '<span class="section-numeral">' + part.numeral + '</span>';
 
-    html += '<div class="chord-part"><div class="section-label">' + label + '</div>';
+    html += '<div class="chord-part"><div class="section-label">' + labelHtml + '</div>';
     part.rows.forEach(function (pairs) {
       html += renderRow(pairs);
     });

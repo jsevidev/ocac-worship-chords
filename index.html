@@ -2,7 +2,12 @@
 layout: default
 title: Song list
 ---
-<details class="section-legend">
+<div class="page-hero">
+  <h1 class="page-title">Song library</h1>
+  <p class="page-subtitle">Browse and search chord sheets from the worship notebooks.</p>
+</div>
+
+<details class="section-legend card-panel">
   <summary>Section key</summary>
   <dl class="legend-list">
     {% for item in site.section_legend %}
@@ -12,12 +17,13 @@ title: Song list
     </div>
     {% endfor %}
   </dl>
-  <p class="legend-note">A numeral alone (no chords below) means replay that section.</p>
+  <p class="legend-note">Repeat lines (e.g. II - III 2x) tell you which sections to play again.</p>
 </details>
 
-<div class="list-controls">
+<div class="list-controls card-panel">
   <div class="search-wrap">
-    <input type="text" id="search" placeholder="Search song title" autocomplete="off">
+    <label class="visually-hidden" for="search">Search songs</label>
+    <input type="search" id="search" placeholder="Search by song title…" autocomplete="off">
   </div>
   <div class="filter-row">
     <div class="filter-field">
@@ -39,12 +45,12 @@ title: Song list
 <div id="song-list" class="song-list"></div>
 
 <p id="list-meta" class="list-meta" hidden></p>
-<nav id="pagination" class="pagination" aria-label="Song list pages" hidden>
+<nav id="pagination" class="pagination card-panel" aria-label="Song list pages" hidden>
   <button type="button" class="page-btn" id="page-prev" disabled>Previous</button>
   <span class="page-info" id="page-info">Page 1 of 1</span>
   <button type="button" class="page-btn" id="page-next" disabled>Next</button>
 </nav>
-<p id="no-results" hidden>No songs match your search.</p>
+<p id="no-results" class="empty-state" hidden>No songs match your search.</p>
 
 <script id="song-data" type="application/json">
 [
@@ -58,4 +64,4 @@ title: Song list
 {% endfor %}
 ]
 </script>
-<script src="{{ '/assets/js/song-list.js' | relative_url }}?v=1"></script>
+<script src="{{ '/assets/js/song-list.js' | relative_url }}?v=2"></script>

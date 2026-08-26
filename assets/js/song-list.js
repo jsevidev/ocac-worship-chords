@@ -100,13 +100,22 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var link = document.createElement('a');
     link.href = song.url;
-    link.textContent = song.title;
+    link.className = 'song-link';
+    var titleSpan = document.createElement('span');
+    titleSpan.className = 'song-link-text';
+    titleSpan.textContent = song.title;
+    link.appendChild(titleSpan);
+    var chevron = document.createElement('span');
+    chevron.className = 'song-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.textContent = '\u203A';
+    link.appendChild(chevron);
     li.appendChild(link);
 
     var meta = document.createElement('span');
     meta.className = 'page-num';
     meta.textContent = showNotebook
-      ? 'Notebook ' + song.notebook + ' \u00b7 p. ' + song.page
+      ? 'Nb. ' + song.notebook + ' \u00b7 p. ' + song.page
       : 'p. ' + song.page;
     li.appendChild(meta);
 
@@ -163,12 +172,15 @@ document.addEventListener('DOMContentLoaded', function () {
         currentGroup.list.appendChild(createSongRow(song, false));
       });
     } else {
+      var wrap = document.createElement('div');
+      wrap.className = 'notebook-group';
       var ul = document.createElement('ul');
       ul.className = 'song-index';
       pageItems.forEach(function (song) {
         ul.appendChild(createSongRow(song, true));
       });
-      listEl.appendChild(ul);
+      wrap.appendChild(ul);
+      listEl.appendChild(wrap);
     }
 
     var end = Math.min(start + PAGE_SIZE, total);
