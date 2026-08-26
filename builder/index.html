@@ -63,7 +63,7 @@ permalink: /builder/
     font-family: 'Inter', sans-serif;
     padding: 32px 20px 80px;
   }
-  .wrap{ max-width: 1100px; margin: 0 auto; }
+  .wrap{ max-width: 1360px; margin: 0 auto; }
   .top-bar{
     display: flex;
     align-items: center;
@@ -107,21 +107,30 @@ permalink: /builder/
   .legend-ref{ margin-top: 8px !important; font-size: 12px !important; }
   .grid{
     display: grid;
-    grid-template-columns: 1.1fr 1fr;
-    gap: 24px;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr) minmax(0, 0.85fr);
+    gap: 20px;
     align-items: start;
   }
-  @media (max-width: 860px){ .grid{ grid-template-columns: 1fr; } }
+  @media (max-width: 1099px){
+    .grid{ grid-template-columns: 1fr; }
+  }
 
-  @media (min-width: 861px){
+  @media (min-width: 1100px){
     .preview-panel{
       position: sticky;
       top: 16px;
       z-index: 5;
     }
+    .col-tools{
+      position: sticky;
+      top: 16px;
+      align-self: start;
+      max-height: calc(100vh - 32px);
+      overflow-y: auto;
+    }
   }
   .preview-panel pre.output{
-    max-height: min(62vh, 560px);
+    max-height: min(72vh, 640px);
     overflow: auto;
   }
 
@@ -440,8 +449,8 @@ permalink: /builder/
   </header>
 
   <div class="grid">
-    <!-- LEFT: FORM -->
-    <div>
+    <!-- COL 1: FORM -->
+    <div class="col-form">
       <div class="card">
         <h2>Song details</h2>
         <div class="meta-row">
@@ -473,8 +482,8 @@ permalink: /builder/
       </div>
     </div>
 
-    <!-- RIGHT: PREVIEW + SAVED -->
-    <div class="sidebar">
+    <!-- COL 2: PREVIEW -->
+    <div class="col-preview">
       <div class="card preview-panel">
         <h2>Preview (this is what gets saved)</h2>
         <pre class="output" id="preview"></pre>
@@ -487,7 +496,10 @@ permalink: /builder/
           <button class="btn-ghost btn-sm" id="pick-folder">Link _songs folder</button>
         </div>
       </div>
+    </div>
 
+    <!-- COL 3: SAVED / PUBLISH / DRAFTS -->
+    <div class="col-tools">
       <div class="card">
         <h2>Songs in _songs</h2>
         <p class="empty-note" id="folder-songs-empty">Finished .md files saved to your linked folder. These are what the website reads.</p>
