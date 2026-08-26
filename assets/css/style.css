@@ -520,13 +520,16 @@ main{
   color: var(--surface);
   background: var(--brass);
   min-width: 32px;
-  height: 32px;
+  min-height: 32px;
+  height: auto;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border-radius: 8px;
-  padding: 0 8px;
+  padding: 4px 10px;
   box-shadow: 0 2px 6px rgba(154, 115, 50, 0.25);
+  text-align: center;
+  line-height: 1.2;
 }
 :root[data-theme="dark"] .section-numeral{
   color: var(--paper-deep);

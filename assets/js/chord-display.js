@@ -8,21 +8,14 @@ document.addEventListener('DOMContentLoaded', function () {
   var text = pre.textContent.trim();
   if (!text) return;
 
-  var rendered = renderChordBlock(text, getLegend(block));
+  var rendered = renderChordBlock(text);
   if (!rendered) return;
 
   block.innerHTML = rendered;
 });
 
-function getLegend(block) {
-  var raw = block.getAttribute('data-section-legend');
-  var legend = {};
-  if (!raw) return legend;
-  raw.split('|').forEach(function (entry) {
-    var parts = entry.split(':');
-    if (parts.length === 2) legend[parts[0].trim()] = parts[1].trim();
-  });
-  return legend;
+function escapeHtml(str) {
+  return (str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function isNumeral(line) {
@@ -31,10 +24,26 @@ function isNumeral(line) {
 
 function parseSectionHeader(line) {
   line = line.trim();
+  if (!line) return null;
   var m = line.match(/^([IVXLCivxlc]+)\s+(\d+x)$/i);
   if (m) return { numeral: m[1].toUpperCase(), repeat: m[2] };
   if (isNumeral(line)) return { numeral: line.toUpperCase(), repeat: '' };
+  var customM = line.match(/^(.+?)\s+(\d+x)$/i);
+  if (customM && !isBeatLine(customM[1])) {
+    return { numeral: customM[1].trim(), repeat: customM[2] };
+  }
   return null;
+}
+
+function parseCustomSectionLabel(line) {
+  line = line.trim();
+  if (!line || isBeatLine(line) || parseSectionHeader(line)) return null;
+  if (isRepeatLine(line)) return null;
+  return { numeral: line, repeat: '' };
+}
+
+function resolveSectionHeader(line) {
+  return parseSectionHeader(line) || parseCustomSectionLabel(line);
 }
 
 function isBeatLine(line) {
@@ -100,7 +109,7 @@ function renderRow(row) {
 }
 
 function renderRepeatFlow(text) {
-  return '<div class="repeat-flow"><span class="repeat-tag">Repeat</span><span class="repeat-text">' + text + '</span></div>';
+  return '<div class="repeat-flow"><span class="repeat-tag">Repeat</span><span class="repeat-text">' + escapeHtml(text) + '</span></div>';
 }
 
 function parseSong(text) {
@@ -116,7 +125,7 @@ function parseSong(text) {
       continue;
     }
 
-    var header = parseSectionHeader(line);
+    var header = resolveSectionHeader(line);
     if (header) {
       var next = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
       var after = (i + 2 < lines.length) ? lines[i + 2].trim() : '';
@@ -129,9 +138,8 @@ function parseSong(text) {
           var beatLine = lines[i].trim();
           var chordLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
 
-          if (!beatLine || parseSectionHeader(beatLine)) break;
-          if (/^\d+x$/i.test(beatLine)) break;
-          if (!isBeatLine(beatLine) || !isChordLine(chordLine)) break;
+          if (!beatLine || !isBeatLine(beatLine)) break;
+          if (!isChordLine(chordLine)) break;
 
           var parsed = parseBeatChordLines(beatLine, chordLine);
           if (!parsed) return null;
@@ -171,7 +179,7 @@ function parseSong(text) {
   return parts.length ? parts : null;
 }
 
-function renderChordBlock(text, legend) {
+function renderChordBlock(text) {
   var parts = parseSong(text);
   if (!parts) return null;
 
@@ -183,12 +191,9 @@ function renderChordBlock(text, legend) {
       return;
     }
 
-    var sectionName = legend[part.numeral] || legend[part.numeral.toUpperCase()];
-    var labelHtml = sectionName
-      ? '<span class="section-numeral">' + part.numeral + '</span><span class="section-name">' + sectionName + '</span>'
-      : '<span class="section-numeral">' + part.numeral + '</span>';
+    var labelHtml = '<span class="section-numeral">' + escapeHtml(part.numeral) + '</span>';
     if (part.repeat) {
-      labelHtml += '<span class="section-repeat">' + part.repeat + '</span>';
+      labelHtml += '<span class="section-repeat">' + escapeHtml(part.repeat) + '</span>';
     }
 
     html += '<div class="chord-part"><div class="section-label">' + labelHtml + '</div>';

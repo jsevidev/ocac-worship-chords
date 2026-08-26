@@ -9,14 +9,9 @@ layout: default
       <span class="badge">Notebook {{ page.notebook }}</span>
       <span class="badge badge-muted">Page {{ page.page }}</span>
     </div>
-    <div class="legend-chips">
-      {% for item in site.section_legend %}
-      <span class="chip"><strong>{{ item.numeral }}</strong> {{ item.name }}</span>
-      {% endfor %}
-    </div>
   </header>
-  <div class="chord-block" data-section-legend="{% for item in site.section_legend %}{{ item.numeral }}:{{ item.name }}{% unless forloop.last %}|{% endunless %}{% endfor %}">
+  <div class="chord-block">
     {{ content }}
   </div>
-  <script src="{{ '/assets/js/chord-display.js' | relative_url }}?v=10"></script>
+  <script src="{{ '/assets/js/chord-display.js' | relative_url }}?v=11"></script>
 </article>

@@ -513,7 +513,7 @@ permalink: /builder/
         <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>Am/G</strong>, etc.).</li>
       </ul>
     </div>
-    <p class="legend-ref">Sections: <strong>I</strong> Intro · <strong>II</strong> Verse · <strong>III</strong> Chorus · <strong>IV</strong> Bridge · <strong>V</strong> Outro</p>
+    <p class="legend-ref">Section labels are whatever you type in <strong>Numeral</strong> &mdash; roman (I, II) or a name (Verse 1, Intro). The site shows your labels as-is.</p>
   </header>
 
   <div class="grid">
@@ -624,12 +624,10 @@ permalink: /builder/
   "songsPath": {{ site.publish.songs_path | jsonify }}
 }
 </script>
-<script id="section-legend" type="application/json">{{ site.section_legend | jsonify }}</script>
 
 <script>
 let state = { id: null, title:'', notebook:'', page:'', sections: [] };
 let repoConfig = JSON.parse(document.getElementById('repo-config').textContent);
-let sectionLegend = JSON.parse(document.getElementById('section-legend').textContent);
 let pendingSongs = [];
 const GITHUB_TOKEN_KEY = 'ocac-github-token';
 
@@ -1162,7 +1160,7 @@ function renderSections(){
       ${sec.repeatOnly ? '' : `
       <div class="numeral">
         <label>Numeral</label>
-        <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="e.g. I">
+        <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="e.g. I or Verse 1">
       </div>
       <div class="repeat-count">
         <label>Repeat</label>
@@ -1505,10 +1503,26 @@ function bindRepeatCountInput(inputEl, setValue){
 
 function parseSectionHeader(line){
   line = line.trim();
+  if(!line) return null;
   var m = line.match(/^([IVXLCivxlc]+)\s+(\d+x)$/i);
   if(m) return { numeral: m[1].toUpperCase(), repeatCount: m[2].replace(/x$/i, '') };
   if(parseIsNumeral(line)) return { numeral: line.toUpperCase(), repeatCount: '' };
+  var customM = line.match(/^(.+?)\s+(\d+x)$/i);
+  if(customM && !parseIsBeatLine(customM[1])){
+    return { numeral: customM[1].trim(), repeatCount: customM[2].replace(/x$/i, '') };
+  }
   return null;
+}
+
+function parseCustomSectionLabel(line){
+  line = line.trim();
+  if(!line || parseIsBeatLine(line) || parseSectionHeader(line)) return null;
+  if(parseIsRepeatLine(line)) return null;
+  return { numeral: line, repeatCount: '' };
+}
+
+function resolveSectionHeader(line){
+  return parseSectionHeader(line) || parseCustomSectionLabel(line);
 }
 
 function formatChordPart(part){
@@ -1792,8 +1806,8 @@ function parseChordBody(text){
   while(i < lines.length){
     var line = lines[i].trim();
     if(!line){ i++; continue; }
-    if(parseIsNumeral(line) || parseSectionHeader(line)){
-      var header = parseSectionHeader(line) || { numeral: line.toUpperCase(), repeatCount: '' };
+    var header = resolveSectionHeader(line);
+    if(header){
       var next = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
       var after = (i + 2 < lines.length) ? lines[i + 2].trim() : '';
       if(parseIsBeatLine(next) && parseIsChordLine(after)){
@@ -1802,9 +1816,8 @@ function parseChordBody(text){
         while(i < lines.length){
           var beatLine = lines[i].trim();
           var chordLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
-          if(!beatLine || parseIsNumeral(beatLine) || parseSectionHeader(beatLine)) break;
-          if(/^\d+x$/i.test(beatLine)) break;
-          if(!parseIsBeatLine(beatLine) || !parseIsChordLine(chordLine)) break;
+          if(!beatLine || !parseIsBeatLine(beatLine)) break;
+          if(!parseIsChordLine(chordLine)) break;
           var parsed = parseBeatChordLines(beatLine, chordLine);
           if(!parsed) break;
           var lineRepeat = parsed.repeatCount;
