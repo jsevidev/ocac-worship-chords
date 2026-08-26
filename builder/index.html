@@ -230,6 +230,108 @@ permalink: /builder/
   .saved-item .meta{ color: var(--ink-soft); font-size: 12px; }
   .empty-note{ color: var(--ink-soft); font-size: 13px; font-style: italic; }
   .status{ font-size:12px; color: var(--brass); margin-left:10px; font-weight:600; height:14px; }
+  .toolbar-hint{
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .help-box{
+    margin-top: 14px;
+    padding: 12px 14px;
+    background: var(--surface-alt);
+    border: 1px solid var(--paper-rule);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .help-box strong{ color: var(--ink); }
+  .help-box ul{ margin: 8px 0 0; padding-left: 18px; }
+
+  .dialog-backdrop{
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 26, 36, 0.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .2s ease, visibility .2s ease;
+  }
+  .dialog-backdrop.open{
+    opacity: 1;
+    visibility: visible;
+  }
+  .dialog{
+    width: 100%;
+    max-width: 380px;
+    background: var(--surface);
+    border: 1px solid var(--paper-rule);
+    border-radius: 12px;
+    padding: 22px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.22);
+    transform: translateY(8px) scale(0.98);
+    transition: transform .2s ease;
+  }
+  .dialog-backdrop.open .dialog{
+    transform: translateY(0) scale(1);
+  }
+  .dialog-title{
+    font-family: 'Lora', serif;
+    font-size: 18px;
+    margin: 0 0 8px;
+    color: var(--ink);
+  }
+  .dialog-message{
+    margin: 0 0 20px;
+    font-size: 14px;
+    color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .dialog-actions{
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .toast-stack{
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: min(360px, calc(100vw - 32px));
+    pointer-events: none;
+  }
+  .toast{
+    pointer-events: auto;
+    background: var(--surface);
+    border: 1px solid var(--paper-rule);
+    border-left: 4px solid var(--brass);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 14px;
+    color: var(--ink);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    opacity: 0;
+    transform: translateX(16px);
+    animation: toast-in .25s ease forwards;
+  }
+  .toast.success{ border-left-color: #5A9E6F; }
+  .toast.error{ border-left-color: var(--danger); }
+  .toast.info{ border-left-color: var(--brass); }
+  @keyframes toast-in{
+    to{ opacity: 1; transform: translateX(0); }
+  }
+  @keyframes toast-out{
+    to{ opacity: 0; transform: translateX(16px); }
+  }
 </style>
 </head>
 <body>
@@ -240,7 +342,14 @@ permalink: /builder/
   </div>
   <header>
     <h1>Chord Sheet Builder</h1>
-    <p>Fill in beats and chords &mdash; alignment is handled for you. Save as you go, download when a song is ready.</p>
+    <p>Fill in beats and chords &mdash; alignment is handled for you.</p>
+    <div class="help-box">
+      <strong>Two ways to save:</strong>
+      <ul>
+        <li><strong>Save draft</strong> &mdash; temporary backup in this browser while you transcribe. Won&rsquo;t appear on the site.</li>
+        <li><strong>Save .md</strong> &mdash; the real song file for <strong>_songs/</strong>. Commit and push to publish on the site.</li>
+      </ul>
+    </div>
     <p class="legend-ref">Sections: <strong>I</strong> Intro · <strong>II</strong> Verse · <strong>III</strong> Chorus · <strong>IV</strong> Bridge · <strong>V</strong> Outro</p>
   </header>
 
@@ -272,8 +381,9 @@ permalink: /builder/
       </div>
 
       <div class="toolbar">
-        <button class="btn-primary" id="save-song">Save song</button>
+        <button class="btn-primary" id="save-song">Save draft</button>
         <button class="btn-ghost" id="new-song">New song</button>
+        <p class="toolbar-hint">Drafts are for unfinished work in this browser only.</p>
       </div>
     </div>
 
@@ -289,27 +399,93 @@ permalink: /builder/
         <div class="save-folder">
           <p class="folder-status" id="folder-status">Link your project's <strong>_songs</strong> folder once — future saves go there automatically.</p>
           <button class="btn-ghost btn-sm" id="pick-folder">Link _songs folder</button>
-          <p class="download-status" id="download-status"></p>
         </div>
       </div>
 
       <div class="card">
         <h2>Songs in _songs</h2>
-        <p class="empty-note" id="folder-songs-empty">Link your _songs folder above to see saved files here.</p>
+        <p class="empty-note" id="folder-songs-empty">Finished .md files saved to your linked folder. These are what the website reads.</p>
         <ul class="saved-list" id="folder-songs-list"></ul>
       </div>
 
       <div class="card">
         <h2>Drafts</h2>
-        <p class="empty-note" id="saved-empty">In-progress work saved with &ldquo;Save song&rdquo; (browser only).</p>
+        <p class="empty-note" id="saved-empty">Unfinished transcriptions saved with &ldquo;Save draft&rdquo;. Only stored in this browser.</p>
         <ul class="saved-list" id="saved-list"></ul>
       </div>
     </div>
   </div>
 </div>
 
+<div class="dialog-backdrop" id="dialog-backdrop" hidden>
+  <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="dialog-title">
+    <h3 class="dialog-title" id="dialog-title">Confirm</h3>
+    <p class="dialog-message" id="dialog-message"></p>
+    <div class="dialog-actions">
+      <button type="button" class="btn-ghost" id="dialog-cancel">Cancel</button>
+      <button type="button" class="btn-danger" id="dialog-confirm">Confirm</button>
+    </div>
+  </div>
+</div>
+<div class="toast-stack" id="toast-stack"></div>
+
 <script>
 let state = { id: null, title:'', notebook:'', page:'', sections: [] };
+
+function showToast(message, type){
+  type = type || 'info';
+  var stack = document.getElementById('toast-stack');
+  var toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.textContent = message;
+  stack.appendChild(toast);
+  setTimeout(function(){
+    toast.style.animation = 'toast-out .2s ease forwards';
+    setTimeout(function(){ toast.remove(); }, 200);
+  }, 3500);
+}
+
+function showConfirm(opts){
+  opts = opts || {};
+  var backdrop = document.getElementById('dialog-backdrop');
+  var titleEl = document.getElementById('dialog-title');
+  var messageEl = document.getElementById('dialog-message');
+  var confirmBtn = document.getElementById('dialog-confirm');
+  var cancelBtn = document.getElementById('dialog-cancel');
+  titleEl.textContent = opts.title || 'Confirm';
+  messageEl.textContent = opts.message || '';
+  confirmBtn.textContent = opts.confirmLabel || 'Confirm';
+  confirmBtn.className = opts.danger ? 'btn-danger' : 'btn-brass';
+  backdrop.hidden = false;
+  requestAnimationFrame(function(){ backdrop.classList.add('open'); });
+  confirmBtn.focus();
+  return new Promise(function(resolve){
+    function close(result){
+      backdrop.classList.remove('open');
+      setTimeout(function(){
+        backdrop.hidden = true;
+        confirmBtn.onclick = null;
+        cancelBtn.onclick = null;
+        backdrop.onclick = null;
+        document.removeEventListener('keydown', onKey);
+      }, 200);
+      resolve(result);
+    }
+    function onKey(e){
+      if(e.key === 'Escape') close(false);
+      if(e.key === 'Enter') close(true);
+    }
+    confirmBtn.onclick = function(){ close(true); };
+    cancelBtn.onclick = function(){ close(false); };
+    backdrop.onclick = function(e){
+      if(e.target === backdrop) close(false);
+    };
+    document.addEventListener('keydown', onKey);
+  });
+}
+
+function flashDownloadStatus(msg, type){ showToast(msg, type || 'success'); }
+function flashStatus(msg, type){ showToast(msg, type || 'info'); }
 
 function newSection(){
   return { numeral: '', repeatOnly: false, lines: [ newLine() ] };
@@ -513,8 +689,8 @@ document.getElementById('new-song').addEventListener('click', ()=>{
 document.getElementById('copy-output').addEventListener('click', async ()=>{
   try{
     await navigator.clipboard.writeText(buildOutput());
-    flashStatus('Copied');
-  }catch(e){ flashStatus('Copy failed'); }
+    showToast('Copied to clipboard', 'success');
+  }catch(e){ showToast('Copy failed', 'error'); }
 });
 
 document.getElementById('download-md').addEventListener('click', async ()=>{
@@ -531,7 +707,7 @@ document.getElementById('download-md').addEventListener('click', async ()=>{
     }
   } catch (e) {
     console.error(e);
-    flashDownloadStatus('Folder save failed — downloaded instead');
+    flashDownloadStatus('Folder save failed — downloaded instead', 'error');
   }
 
   fallbackDownload(filename, content);
@@ -546,19 +722,7 @@ function fallbackDownload(filename, content){
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
-  flashDownloadStatus('Downloaded ' + filename + ' — link _songs folder to skip this');
-}
-
-function flashDownloadStatus(msg){
-  const el = document.getElementById('download-status');
-  el.textContent = msg;
-  setTimeout(()=>{ el.textContent=''; }, 3500);
-}
-
-function flashStatus(msg){
-  const el = document.getElementById('section-status');
-  el.textContent = msg;
-  setTimeout(()=>{ el.textContent=''; }, 1500);
+  flashDownloadStatus('Downloaded ' + filename, 'info');
 }
 
 // ---- persistence (browser localStorage) ----
@@ -658,7 +822,7 @@ function updateFolderUI(name){
 
 async function pickSongsFolder(){
   if(!supportsFolderSave()){
-    flashDownloadStatus('Use Chrome or Edge to save directly to _songs');
+    flashDownloadStatus('Use Chrome or Edge to save directly to _songs', 'info');
     return;
   }
   try{
@@ -668,7 +832,7 @@ async function pickSongsFolder(){
     flashDownloadStatus('Linked folder: ' + handle.name);
     await renderFolderSongs();
   }catch(e){
-    if(e.name !== 'AbortError') flashDownloadStatus('Could not link folder');
+    if(e.name !== 'AbortError') flashDownloadStatus('Could not link folder', 'error');
   }
 }
 
@@ -778,7 +942,7 @@ async function loadFromFolder(fileHandle){
     renderSections();
     flashDownloadStatus('Loaded ' + fileHandle.name);
   }catch(e){
-    flashDownloadStatus('Could not load file');
+    flashDownloadStatus('Could not load file', 'error');
     console.error(e);
   }
 }
@@ -849,14 +1013,14 @@ async function saveSong(){
   state.title = document.getElementById('f-title').value.trim();
   state.notebook = document.getElementById('f-notebook').value.trim();
   state.page = document.getElementById('f-page').value.trim();
-  if(!state.title){ flashStatus('Add a title first'); return; }
+  if(!state.title){ flashStatus('Add a title first', 'error'); return; }
   if(!state.id){ state.id = 'song_' + Date.now() + '_' + Math.random().toString(36).slice(2,7); }
   try{
     await storage.set('songs:' + state.id, JSON.stringify(state));
-    flashStatus('Saved');
+    flashStatus('Draft saved', 'success');
     await renderSavedList();
   }catch(e){
-    flashStatus('Save failed');
+    flashStatus('Save failed', 'error');
     console.error(e);
   }
 }
@@ -872,8 +1036,8 @@ async function loadSong(id){
     document.getElementById('f-notebook').value = state.notebook || '';
     document.getElementById('f-page').value = state.page || '';
     renderSections();
-    flashStatus('Loaded');
-  }catch(e){ flashStatus('Load failed'); console.error(e); }
+    flashStatus('Draft loaded', 'success');
+  }catch(e){ flashStatus('Load failed', 'error'); console.error(e); }
 }
 
 async function deleteSong(id){
@@ -900,7 +1064,7 @@ async function renderSavedList(){
     const keys = (listing && listing.keys) ? listing.keys : [];
     if(keys.length === 0){
       emptyEl.style.display = 'block';
-      emptyEl.textContent = 'No drafts yet — use "Save song" while working.';
+      emptyEl.textContent = 'No drafts yet — use "Save draft" while working.';
       return;
     }
     emptyEl.style.display = 'none';
@@ -928,8 +1092,14 @@ async function renderSavedList(){
         </div>
       `;
       li.querySelector('[data-role=load]').addEventListener('click', ()=> loadSong(song.id));
-      li.querySelector('[data-role=delete]').addEventListener('click', ()=> {
-        if(confirm(`Delete "${song.title}"?`)) deleteSong(song.id);
+      li.querySelector('[data-role=delete]').addEventListener('click', async ()=> {
+        var ok = await showConfirm({
+          title: 'Delete draft?',
+          message: 'Remove "' + (song.title || 'Untitled') + '" from this browser? This cannot be undone.',
+          confirmLabel: 'Delete',
+          danger: true
+        });
+        if(ok) deleteSong(song.id);
       });
       listEl.appendChild(li);
     });
