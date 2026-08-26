@@ -113,6 +113,18 @@ permalink: /builder/
   }
   @media (max-width: 860px){ .grid{ grid-template-columns: 1fr; } }
 
+  @media (min-width: 861px){
+    .preview-panel{
+      position: sticky;
+      top: 16px;
+      z-index: 5;
+    }
+  }
+  .preview-panel pre.output{
+    max-height: min(62vh, 560px);
+    overflow: auto;
+  }
+
   .card{
     background: var(--surface);
     border: 1px solid var(--paper-rule);
@@ -462,8 +474,8 @@ permalink: /builder/
     </div>
 
     <!-- RIGHT: PREVIEW + SAVED -->
-    <div>
-      <div class="card">
+    <div class="sidebar">
+      <div class="card preview-panel">
         <h2>Preview (this is what gets saved)</h2>
         <pre class="output" id="preview"></pre>
         <div class="output-actions">
