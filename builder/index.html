@@ -294,9 +294,15 @@ permalink: /builder/
       </div>
 
       <div class="card">
-        <h2>Saved songs</h2>
+        <h2>Songs in _songs</h2>
+        <p class="empty-note" id="folder-songs-empty">Link your _songs folder above to see saved files here.</p>
+        <ul class="saved-list" id="folder-songs-list"></ul>
+      </div>
+
+      <div class="card">
+        <h2>Drafts</h2>
+        <p class="empty-note" id="saved-empty">In-progress work saved with &ldquo;Save song&rdquo; (browser only).</p>
         <ul class="saved-list" id="saved-list"></ul>
-        <p class="empty-note" id="saved-empty">Nothing saved yet.</p>
       </div>
     </div>
   </div>
@@ -518,8 +524,9 @@ document.getElementById('download-md').addEventListener('click', async ()=>{
 
   try {
     const saved = await saveToSongsFolder(filename, content);
-    if (saved) {
+    if(saved) {
       flashDownloadStatus('Saved to _songs/' + filename);
+      await renderFolderSongs();
       return;
     }
   } catch (e) {
@@ -659,6 +666,7 @@ async function pickSongsFolder(){
     await idb.set(DIR_KEY, handle);
     updateFolderUI(handle.name);
     flashDownloadStatus('Linked folder: ' + handle.name);
+    await renderFolderSongs();
   }catch(e){
     if(e.name !== 'AbortError') flashDownloadStatus('Could not link folder');
   }
@@ -673,8 +681,168 @@ async function initSaveFolder(){
   }
   try{
     var handle = await idb.get(DIR_KEY);
-    if(handle) updateFolderUI(handle.name);
+    if(handle){
+      updateFolderUI(handle.name);
+      await renderFolderSongs();
+    }
   }catch(e){ /* no linked folder yet */ }
+}
+
+function parseFrontMatter(fm){
+  var title = '';
+  var m = fm.match(/title:\s*"([^"]*)"/);
+  if(m) title = m[1];
+  else { m = fm.match(/title:\s*(.+)/); if(m) title = m[1].trim(); }
+  m = fm.match(/notebook:\s*(.+)/);
+  var notebook = m ? m[1].trim().replace(/^"|"$/g, '') : '';
+  m = fm.match(/page:\s*(.+)/);
+  var page = m ? m[1].trim().replace(/^"|"$/g, '') : '';
+  return { title: title, notebook: notebook, page: page };
+}
+
+function parseIsNumeral(line){ return /^[IVXLCivxlc]+$/.test(line.trim()); }
+function parseIsBeatLine(line){ return /^\d[\d\s]*$/.test(line.trim()); }
+function parseIsChordLine(line){
+  return /[A-Ga-g]/.test(line) && (line.indexOf(' - ') !== -1 || /^[A-Ga-g#b\d\/]+$/.test(line.trim()));
+}
+function parseIsRepeatLine(line){
+  line = line.trim();
+  if(!line || parseIsBeatLine(line)) return false;
+  if(parseIsNumeral(line)) return true;
+  return /^([IVXLCivxlc]+(\s+\d+x)?)(\s*-\s*[IVXLCivxlc]+(\s+\d+x)?)*$/i.test(line);
+}
+
+function parseChordBody(text){
+  var lines = text.split('\n');
+  var sections = [];
+  var i = 0;
+  while(i < lines.length){
+    var line = lines[i].trim();
+    if(!line){ i++; continue; }
+    if(parseIsNumeral(line)){
+      var next = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
+      var after = (i + 2 < lines.length) ? lines[i + 2].trim() : '';
+      if(parseIsBeatLine(next) && parseIsChordLine(after)){
+        var sec = { numeral: line, repeatOnly: false, lines: [] };
+        i++;
+        while(i < lines.length){
+          var beatLine = lines[i].trim();
+          var chordLine = (i + 1 < lines.length) ? lines[i + 1].trim() : '';
+          if(!beatLine || parseIsNumeral(beatLine)) break;
+          if(!parseIsBeatLine(beatLine) || !parseIsChordLine(chordLine)) break;
+          var beats = beatLine.match(/\d+/g) || [];
+          var chords = chordLine.split(/\s+-\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
+          var pairs = beats.map(function(b, idx){ return { beat: b, chord: chords[idx] || '' }; });
+          if(pairs.length === 0) pairs.push({ beat: '', chord: '' });
+          sec.lines.push(pairs);
+          i += 2;
+          if(i < lines.length && !lines[i].trim()) i++;
+        }
+        sections.push(sec);
+        continue;
+      }
+    }
+    if(parseIsRepeatLine(line)){
+      sections.push({ numeral: line, repeatOnly: true, lines: [ newLine() ] });
+      i++;
+      continue;
+    }
+    i++;
+  }
+  return sections.length ? sections : [ newSection() ];
+}
+
+function parseMarkdown(md){
+  var fmMatch = md.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  var meta = fmMatch ? parseFrontMatter(fmMatch[1]) : { title: '', notebook: '', page: '' };
+  var bodyMatch = md.match(/```\r?\n([\s\S]*?)\r?\n```/);
+  var sections = bodyMatch ? parseChordBody(bodyMatch[1]) : [ newSection() ];
+  return {
+    id: null,
+    title: meta.title,
+    notebook: meta.notebook,
+    page: meta.page,
+    sections: sections
+  };
+}
+
+async function loadFromFolder(fileHandle){
+  try{
+    var file = await fileHandle.getFile();
+    var text = await file.text();
+    state = parseMarkdown(text);
+    if(!state.sections || state.sections.length === 0) state.sections = [ newSection() ];
+    document.getElementById('f-title').value = state.title || '';
+    document.getElementById('f-notebook').value = state.notebook || '';
+    document.getElementById('f-page').value = state.page || '';
+    renderSections();
+    flashDownloadStatus('Loaded ' + fileHandle.name);
+  }catch(e){
+    flashDownloadStatus('Could not load file');
+    console.error(e);
+  }
+}
+
+async function renderFolderSongs(){
+  var listEl = document.getElementById('folder-songs-list');
+  var emptyEl = document.getElementById('folder-songs-empty');
+  listEl.innerHTML = '';
+  if(!supportsFolderSave()){
+    emptyEl.textContent = 'Link _songs folder (Chrome or Edge) to see saved files here.';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  var dir = await getSongsDirHandle();
+  if(!dir){
+    emptyEl.textContent = 'Link your _songs folder above to see saved files here.';
+    emptyEl.style.display = 'block';
+    return;
+  }
+  try{
+    var files = [];
+    for await (var entry of dir.values()){
+      if(entry.kind === 'file' && entry.name.endsWith('.md')){
+        files.push(entry);
+      }
+    }
+    files.sort(function(a, b){ return a.name.localeCompare(b.name); });
+    if(files.length === 0){
+      emptyEl.textContent = 'No .md files in this folder yet.';
+      emptyEl.style.display = 'block';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    for(var i = 0; i < files.length; i++){
+      (function(fileHandle){
+        fileHandle.getFile().then(function(file){
+          return file.text();
+        }).then(function(text){
+          var parsed = parseMarkdown(text);
+          var li = document.createElement('li');
+          li.className = 'saved-item';
+          li.innerHTML =
+            '<div>' +
+              '<div>' + (parsed.title || fileHandle.name) + '</div>' +
+              '<div class="meta">' + fileHandle.name +
+                (parsed.notebook ? ' · Notebook ' + parsed.notebook : '') +
+                (parsed.page ? ' · p. ' + parsed.page : '') +
+              '</div>' +
+            '</div>' +
+            '<div class="row-actions">' +
+              '<button class="btn-ghost btn-sm" data-role="load">Load</button>' +
+            '</div>';
+          li.querySelector('[data-role=load]').addEventListener('click', function(){
+            loadFromFolder(fileHandle);
+          });
+          listEl.appendChild(li);
+        }).catch(function(){ /* skip bad file */ });
+      })(files[i]);
+    }
+  }catch(e){
+    emptyEl.textContent = 'Could not read folder — try linking it again.';
+    emptyEl.style.display = 'block';
+    console.error(e);
+  }
 }
 
 async function saveSong(){
@@ -730,7 +898,11 @@ async function renderSavedList(){
   try{
     const listing = await storage.list('songs:');
     const keys = (listing && listing.keys) ? listing.keys : [];
-    if(keys.length === 0){ emptyEl.style.display = 'block'; return; }
+    if(keys.length === 0){
+      emptyEl.style.display = 'block';
+      emptyEl.textContent = 'No drafts yet — use "Save song" while working.';
+      return;
+    }
     emptyEl.style.display = 'none';
 
     const songs = [];
