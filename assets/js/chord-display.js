@@ -63,12 +63,19 @@ function parsePairs(beatLine, chordLine) {
   return pairs;
 }
 
-function renderRow(pairs) {
-  var html = '<div class="chord-row">';
+function renderRow(row) {
+  var pairs = row.pairs || row;
+  var repeat = row.repeat || '';
+  var html = '<div class="chord-row-wrap">';
+  html += '<div class="chord-row">';
   pairs.forEach(function (pair, i) {
     if (i > 0) html += '<span class="chord-sep">-</span>';
     html += '<div class="chord-pair"><span class="beat">' + pair.beat + '</span><span class="chord">' + pair.chord + '</span></div>';
   });
+  html += '</div>';
+  if (repeat) {
+    html += '<span class="line-repeat">' + repeat + '</span>';
+  }
   html += '</div>';
   return html;
 }
@@ -110,10 +117,17 @@ function parseSong(text) {
           var pairs = parsePairs(beatLine, chordLine);
           if (!pairs) return null;
 
-          section.rows.push(pairs);
+          var lineRepeat = '';
           i += 2;
-
           if (i < lines.length && !lines[i].trim()) i++;
+          if (i < lines.length && /^\d+x$/i.test(lines[i].trim())) {
+            lineRepeat = lines[i].trim();
+            i++;
+          }
+
+          section.rows.push({ pairs: pairs, repeat: lineRepeat });
+          if (i < lines.length && !lines[i].trim()) i++;
+          continue;
         }
 
         if (i < lines.length && /^\d+x$/i.test(lines[i].trim())) {

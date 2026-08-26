@@ -211,7 +211,9 @@ permalink: /builder/
   .btn-danger{ background: transparent; color: var(--danger); border-color: var(--danger-border); }
   .btn-danger:hover{ background: var(--danger-hover); }
   .btn-sm{ padding: 4px 8px; font-size: 12px; }
-  .row-actions{ display:flex; gap:6px; margin-top: 2px; flex-wrap: wrap; }
+  .row-actions{ display:flex; gap:6px; margin-top: 2px; flex-wrap: wrap; align-items: flex-end; }
+  .row-actions .repeat-count{ width: 56px; flex: none; }
+  .row-actions .repeat-count input{ width: 100%; text-align: center; }
   .toolbar{ display:flex; gap:8px; flex-wrap: wrap; margin-top: 6px; }
 
   pre.output{
@@ -416,7 +418,8 @@ permalink: /builder/
       <ul>
         <li><strong>Save draft</strong> &mdash; temporary backup in this browser while you transcribe. Won&rsquo;t appear on the site.</li>
         <li><strong>Save .md</strong> &mdash; the real song file for <strong>_songs/</strong>. Commit and push to publish on the site.</li>
-        <li><strong>Section repeat</strong> &mdash; use the <strong>Repeat</strong> field (e.g. <strong>2x</strong>) to play that section twice. Saved as <strong>III 2x</strong> on the section line.</li>
+        <li><strong>Section repeat</strong> &mdash; use the section <strong>Repeat</strong> field (e.g. <strong>2x</strong>) to play that whole section twice. Saved as <strong>III 2x</strong>.</li>
+        <li><strong>Line repeat</strong> &mdash; each chord line has its own <strong>Repeat</strong> field; saved as <strong>2x</strong> on the line below the chords.</li>
         <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>Am/G</strong>, etc.).</li>
       </ul>
     </div>
@@ -869,7 +872,24 @@ function flashStatus(msg, type){ showToast(msg, type || 'info'); }
 function newSection(){
   return { numeral: '', repeatOnly: false, repeatCount: '', lines: [ newLine() ] };
 }
-function newLine(){ return [ {beat:'', chord:''}, {beat:'', chord:''} ]; }
+function newLine(){
+  return { repeatCount: '', pairs: [ {beat:'', chord:''}, {beat:'', chord:''} ] };
+}
+
+function normalizeLine(line){
+  if(Array.isArray(line)) return { repeatCount: '', pairs: line };
+  if(line && line.pairs) return { repeatCount: line.repeatCount || '', pairs: line.pairs };
+  return newLine();
+}
+
+function normalizeSections(sections){
+  return (sections || [ newSection() ]).map(function(sec){
+    if(!sec.repeatOnly && sec.lines){
+      sec.lines = sec.lines.map(normalizeLine);
+    }
+    return sec;
+  });
+}
 
 function padRight(str, width){
   str = (str||'').toString();
@@ -918,7 +938,17 @@ function buildOutput(){
       var n = String(sec.repeatCount).replace(/x$/i, '');
       if(n) header += ' ' + n + 'x';
     }
-    const rendered = sec.lines.map(alignLine).filter(Boolean).map(l => `${l.beats}\n${l.chords}`);
+    const rendered = sec.lines.map(function(lineObj){
+      lineObj = normalizeLine(lineObj);
+      var aligned = alignLine(lineObj.pairs);
+      if(!aligned) return null;
+      var block = aligned.beats + '\n' + aligned.chords;
+      if(lineObj.repeatCount){
+        var n = String(lineObj.repeatCount).replace(/x$/i, '');
+        if(n) block += '\n' + n + 'x';
+      }
+      return block;
+    }).filter(Boolean);
     if(rendered.length === 0) return header;
     return `${header}\n${rendered.join('\n\n')}`;
   }).join('\n\n');
@@ -931,6 +961,9 @@ function renderPreview(){
 }
 
 function renderSections(){
+  state.sections.forEach(function(sec){
+    if(!sec.repeatOnly && sec.lines) sec.lines = sec.lines.map(normalizeLine);
+  });
   const container = document.getElementById('sections');
   container.innerHTML = '';
   state.sections.forEach((sec, i)=>{
@@ -984,21 +1017,7 @@ function renderSections(){
       renderPreview();
     });
     var repeatCountEl = head.querySelector('[data-role=repeat-count]');
-    if(repeatCountEl){
-      repeatCountEl.addEventListener('input', e=>{
-        var raw = e.target.value;
-        var formatted = formatRepeatCount(raw, true);
-        if(formatted !== raw) e.target.value = formatted;
-        sec.repeatCount = formatted.replace(/x$/i, '');
-        renderPreview();
-      });
-      repeatCountEl.addEventListener('blur', e=>{
-        var formatted = formatRepeatCount(e.target.value, false);
-        if(formatted !== e.target.value) e.target.value = formatted;
-        sec.repeatCount = formatted.replace(/x$/i, '');
-        renderPreview();
-      });
-    }
+    if(repeatCountEl) bindRepeatCountInput(repeatCountEl, function(v){ sec.repeatCount = v; });
     head.querySelector('[data-role=repeat]').addEventListener('change', e=>{
       sec.repeatOnly = e.target.checked; renderSections(); renderPreview();
     });
@@ -1014,7 +1033,8 @@ function renderSections(){
   renderPreview();
 }
 
-function renderPairLine(i, j, line){
+function renderPairLine(i, j, lineObj){
+  const line = lineObj.pairs;
   const lineEl = document.createElement('div');
   lineEl.className = 'pair-line';
 
@@ -1051,18 +1071,26 @@ function renderPairLine(i, j, line){
       renderPreview();
     });
     pairEl.querySelector('[data-role=remove-pair]').addEventListener('click', ()=>{
-      line.splice(k,1); renderSections(); renderPreview();
+      lineObj.pairs.splice(k,1); renderSections(); renderPreview();
     });
     lineEl.appendChild(pairEl);
   });
 
   const controls = document.createElement('div');
   controls.className = 'row-actions';
+  const repeatWrap = document.createElement('div');
+  repeatWrap.className = 'repeat-count';
+  repeatWrap.innerHTML = `
+    <span class="lbl">Repeat</span>
+    <input type="text" data-role="line-repeat-count" value="${escapeAttr(lineObj.repeatCount ? lineObj.repeatCount + 'x' : '')}" placeholder="2x">
+  `;
+  bindRepeatCountInput(repeatWrap.querySelector('[data-role=line-repeat-count]'), function(v){ lineObj.repeatCount = v; });
+  controls.appendChild(repeatWrap);
   const addPairBtn = document.createElement('button');
   addPairBtn.className = 'btn-ghost btn-sm';
   addPairBtn.textContent = '+ Chord';
   addPairBtn.addEventListener('click', ()=>{
-    line.push({beat:'', chord:''}); renderSections(); renderPreview();
+    lineObj.pairs.push({beat:'', chord:''}); renderSections(); renderPreview();
   });
   const removeLineBtn = document.createElement('button');
   removeLineBtn.className = 'btn-ghost btn-sm';
@@ -1107,6 +1135,22 @@ function formatRepeatCount(value, partial){
   var m = v.match(/^(\d+)\s*x?$/i);
   if(m) return m[1] + 'x';
   return v;
+}
+
+function bindRepeatCountInput(inputEl, setValue){
+  inputEl.addEventListener('input', function(e){
+    var raw = e.target.value;
+    var formatted = formatRepeatCount(raw, true);
+    if(formatted !== raw) e.target.value = formatted;
+    setValue(formatted.replace(/x$/i, ''));
+    renderPreview();
+  });
+  inputEl.addEventListener('blur', function(e){
+    var formatted = formatRepeatCount(e.target.value, false);
+    if(formatted !== e.target.value) e.target.value = formatted;
+    setValue(formatted.replace(/x$/i, ''));
+    renderPreview();
+  });
 }
 
 function parseSectionHeader(line){
@@ -1389,8 +1433,14 @@ function parseChordBody(text){
           var chords = chordLine.split(/\s+-\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
           var pairs = beats.map(function(b, idx){ return { beat: b, chord: chords[idx] || '' }; });
           if(pairs.length === 0) pairs.push({ beat: '', chord: '' });
-          sec.lines.push(pairs);
+          var lineRepeat = '';
           i += 2;
+          if(i < lines.length && !lines[i].trim()) i++;
+          if(i < lines.length && /^\d+x$/i.test(lines[i].trim())){
+            lineRepeat = lines[i].trim().replace(/x$/i, '');
+            i++;
+          }
+          sec.lines.push({ pairs: pairs, repeatCount: lineRepeat });
           if(i < lines.length && !lines[i].trim()) i++;
         }
         if(i < lines.length && /^\d+x$/i.test(lines[i].trim())){
@@ -1431,11 +1481,12 @@ async function loadFromFolder(fileHandle){
     var text = await file.text();
     state = parseMarkdown(text);
     if(!state.sections || state.sections.length === 0) state.sections = [ newSection() ];
+    state.sections = normalizeSections(state.sections);
     state.sections.forEach(function(sec){
       sec.numeral = formatNumeral(sec.numeral, sec.repeatOnly);
       if(!sec.repeatOnly && sec.lines){
-        sec.lines.forEach(function(line){
-          line.forEach(function(pair){ pair.chord = formatChordFinal(pair.chord); });
+        sec.lines.forEach(function(lineObj){
+          lineObj.pairs.forEach(function(pair){ pair.chord = formatChordFinal(pair.chord); });
         });
       }
     });
@@ -1535,11 +1586,12 @@ async function loadSong(id){
     if(!result) return;
     state = JSON.parse(result.value);
     if(!state.sections || state.sections.length === 0) state.sections = [newSection()];
+    state.sections = normalizeSections(state.sections);
     state.sections.forEach(function(sec){
       sec.numeral = formatNumeral(sec.numeral, sec.repeatOnly);
       if(!sec.repeatOnly && sec.lines){
-        sec.lines.forEach(function(line){
-          line.forEach(function(pair){ pair.chord = formatChordFinal(pair.chord); });
+        sec.lines.forEach(function(lineObj){
+          lineObj.pairs.forEach(function(pair){ pair.chord = formatChordFinal(pair.chord); });
         });
       }
     });

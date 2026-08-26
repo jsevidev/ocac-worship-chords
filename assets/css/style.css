@@ -589,7 +589,7 @@ main{
   align-items: flex-end;
   justify-content: flex-start;
   gap: 0;
-  margin-bottom: 12px;
+  margin-bottom: 0;
   padding: 14px 12px;
   background: var(--surface);
   border-radius: var(--radius-sm);
@@ -597,6 +597,26 @@ main{
   font-family: var(--font-mono);
   font-size: 17px;
   font-variant-numeric: tabular-nums;
+  flex: 1;
+}
+.chord-row-wrap{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.chord-row-wrap:last-child{ margin-bottom: 0; }
+.line-repeat{
+  font-family: var(--font-serif);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: .08em;
+  color: var(--brass);
+  padding: 2px 8px;
+  background: var(--brass-soft);
+  border-radius: 999px;
+  border: 1px solid var(--brass-light);
+  flex-shrink: 0;
 }
 .chord-row:last-child{ margin-bottom: 0; }
 
