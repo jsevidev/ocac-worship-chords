@@ -144,6 +144,32 @@ permalink: /builder/
     font-size: 14px;
     background: var(--input-bg);
     color: var(--ink);
+    transition: border-color .15s, background .15s, box-shadow .15s;
+  }
+  input[type=text]::placeholder,
+  input[type=number]::placeholder{
+    color: var(--ink-soft);
+    opacity: 0.65;
+    font-style: italic;
+    font-weight: 400;
+  }
+  input[type=text]:placeholder-shown,
+  input[type=number]:placeholder-shown{
+    background: var(--surface-alt);
+    border-style: dashed;
+    border-color: color-mix(in srgb, var(--paper-rule) 80%, var(--ink-soft));
+    box-shadow: none;
+  }
+  input[type=text]:not(:placeholder-shown),
+  input[type=number]:not(:placeholder-shown){
+    background: var(--surface);
+    border-style: solid;
+    font-weight: 600;
+    color: var(--ink);
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+  }
+  .pair input:not(:placeholder-shown).chord{
+    color: var(--brass);
   }
   input:focus{ outline: 2px solid var(--brass); outline-offset: 1px; }
   .meta-row{ display:grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; margin-bottom: 16px; }
@@ -361,15 +387,15 @@ permalink: /builder/
         <div class="meta-row">
           <div>
             <label for="f-title">Title</label>
-            <input type="text" id="f-title" placeholder="Amazing Grace">
+            <input type="text" id="f-title" placeholder="e.g. Amazing Grace">
           </div>
           <div>
             <label for="f-notebook">Notebook #</label>
-            <input type="text" id="f-notebook" placeholder="1">
+            <input type="text" id="f-notebook" placeholder="e.g. 1">
           </div>
           <div>
             <label for="f-page">Page #</label>
-            <input type="text" id="f-page" placeholder="12">
+            <input type="text" id="f-page" placeholder="e.g. 12">
           </div>
         </div>
       </div>
@@ -558,7 +584,7 @@ function renderSections(){
     head.innerHTML = `
       <div class="numeral" style="${sec.repeatOnly ? 'flex:1' : ''}">
         <label>${sec.repeatOnly ? 'Repeat line' : 'Numeral'}</label>
-        <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="${sec.repeatOnly ? 'II - III 2x' : 'I'}">
+        <input type="text" data-role="numeral" value="${escapeAttr(sec.numeral)}" placeholder="${sec.repeatOnly ? 'e.g. II - III 2x' : 'e.g. I'}">
       </div>
       <div style="flex:1">
         <div class="checkbox-row">
@@ -619,11 +645,11 @@ function renderPairLine(i, j, line){
     pairEl.innerHTML = `
       <div>
         <span class="lbl">Beats</span>
-        <input type="text" data-role="beat" value="${escapeAttr(pair.beat)}" placeholder="4">
+        <input type="text" data-role="beat" value="${escapeAttr(pair.beat)}" placeholder="e.g. 4">
       </div>
       <div>
         <span class="lbl">Chord</span>
-        <input type="text" class="chord" data-role="chord" value="${escapeAttr(pair.chord)}" placeholder="G">
+        <input type="text" class="chord" data-role="chord" value="${escapeAttr(pair.chord)}" placeholder="e.g. G">
       </div>
       <button class="btn-danger btn-sm" data-role="remove-pair" title="Remove chord">&times;</button>
     `;
