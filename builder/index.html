@@ -986,7 +986,14 @@ function renderSections(){
     var repeatCountEl = head.querySelector('[data-role=repeat-count]');
     if(repeatCountEl){
       repeatCountEl.addEventListener('input', e=>{
-        var formatted = formatRepeatCount(e.target.value);
+        var raw = e.target.value;
+        var formatted = formatRepeatCount(raw, true);
+        if(formatted !== raw) e.target.value = formatted;
+        sec.repeatCount = formatted.replace(/x$/i, '');
+        renderPreview();
+      });
+      repeatCountEl.addEventListener('blur', e=>{
+        var formatted = formatRepeatCount(e.target.value, false);
         if(formatted !== e.target.value) e.target.value = formatted;
         sec.repeatCount = formatted.replace(/x$/i, '');
         renderPreview();
@@ -1093,9 +1100,10 @@ function formatNumeral(value, repeatOnly){
   return repeatOnly ? formatRepeatLine(value) : formatSectionNumeral(value);
 }
 
-function formatRepeatCount(value){
+function formatRepeatCount(value, partial){
   var v = (value || '').trim();
   if(!v) return '';
+  if(partial && /^\d+$/.test(v)) return v;
   var m = v.match(/^(\d+)\s*x?$/i);
   if(m) return m[1] + 'x';
   return v;
