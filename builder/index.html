@@ -420,7 +420,7 @@ permalink: /builder/
         <li><strong>Save draft</strong> &mdash; temporary backup in this browser while you transcribe. Won&rsquo;t appear on the site.</li>
         <li><strong>Save .md</strong> &mdash; the real song file for <strong>_songs/</strong>. Commit and push to publish on the site.</li>
         <li><strong>Section repeat</strong> &mdash; use the section <strong>Repeat</strong> field (e.g. <strong>2x</strong>) to play that whole section twice. Saved as <strong>III 2x</strong>.</li>
-        <li><strong>Line repeat</strong> &mdash; each chord line has its own <strong>Repeat</strong> field; saved as <strong>2x</strong> on the line below the chords.</li>
+        <li><strong>Line repeat</strong> &mdash; use <strong>Repeat</strong> on a chord line to play that sequence again (e.g. E-A three times saves as <strong>E - A - 3x</strong>, then continue with the next line).</li>
         <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>Am/G</strong>, etc.).</li>
       </ul>
     </div>
@@ -965,7 +965,7 @@ function padCenter(str, width){
   return ' '.repeat(left) + str + ' '.repeat(pad - left);
 }
 
-function alignLine(pairs){
+function alignLine(pairs, repeatCount){
   const cleaned = pairs.filter(p => (p.beat||'').trim() !== '' || (p.chord||'').trim() !== '');
   if(cleaned.length === 0) return null;
   const beatCells = [], chordCells = [];
@@ -978,9 +978,14 @@ function alignLine(pairs){
     beatCells.push(padCenter(beat, width));
     chordCells.push(padRight(chord, width));
   });
+  var chords = chordCells.join(sepChord).replace(/\s+$/,'');
+  if(repeatCount){
+    var n = String(repeatCount).replace(/x$/i, '');
+    if(n) chords += sepChord + n + 'x';
+  }
   return {
     beats: beatCells.join(sepBeat).replace(/\s+$/,''),
-    chords: chordCells.join(sepChord).replace(/\s+$/,'')
+    chords: chords
   };
 }
 
@@ -1001,14 +1006,9 @@ function buildOutput(){
     }
     const rendered = sec.lines.map(function(lineObj){
       lineObj = normalizeLine(lineObj);
-      var aligned = alignLine(lineObj.pairs);
+      var aligned = alignLine(lineObj.pairs, lineObj.repeatCount);
       if(!aligned) return null;
-      var block = aligned.beats + '\n' + aligned.chords;
-      if(lineObj.repeatCount){
-        var n = String(lineObj.repeatCount).replace(/x$/i, '');
-        if(n) block += '\n' + n + 'x';
-      }
-      return block;
+      return aligned.beats + '\n' + aligned.chords;
     }).filter(Boolean);
     if(rendered.length === 0) return header;
     return `${header}\n${rendered.join('\n\n')}`;
@@ -1143,7 +1143,7 @@ function renderPairLine(i, j, lineObj){
   repeatWrap.className = 'repeat-count';
   repeatWrap.innerHTML = `
     <span class="lbl">Repeat</span>
-    <input type="text" data-role="line-repeat-count" value="${escapeAttr(lineObj.repeatCount ? lineObj.repeatCount + 'x' : '')}" placeholder="2x">
+    <input type="text" data-role="line-repeat-count" value="${escapeAttr(lineObj.repeatCount ? lineObj.repeatCount + 'x' : '')}" placeholder="3x" title="Repeat this chord sequence (e.g. E-A) before the next line">
   `;
   bindRepeatCountInput(repeatWrap.querySelector('[data-role=line-repeat-count]'), function(v){ lineObj.repeatCount = v; });
   controls.appendChild(repeatWrap);
@@ -1461,7 +1461,23 @@ function parseFrontMatter(fm){
 function parseIsNumeral(line){ return /^[IVXLCivxlc]+$/.test(line.trim()); }
 function parseIsBeatLine(line){ return /^\d[\d\s]*$/.test(line.trim()); }
 function parseIsChordLine(line){
-  return /[A-Ga-g]/.test(line) && (line.indexOf(' - ') !== -1 || /^[A-Za-z#b0-9\/]+$/.test(line.trim()));
+  var core = line.trim().replace(/\s+-\s+\d+x\s*$/i, '');
+  return /[A-Ga-g]/.test(core) && (core.indexOf(' - ') !== -1 || /^[A-Za-z#b0-9\/]+$/.test(core));
+}
+
+function parseBeatChordLines(beatLine, chordLine){
+  var lineRepeat = '';
+  var chordPart = chordLine.trim();
+  var repeatMatch = chordPart.match(/\s+-\s+(\d+x)\s*$/i);
+  if(repeatMatch){
+    lineRepeat = repeatMatch[1].replace(/x$/i, '');
+    chordPart = chordPart.slice(0, repeatMatch.index);
+  }
+  var beats = beatLine.match(/\d+/g) || [];
+  var chords = chordPart.split(/\s+-\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
+  if(beats.length !== chords.length || beats.length === 0) return null;
+  var pairs = beats.map(function(b, idx){ return { beat: b, chord: chords[idx] || '' }; });
+  return { pairs: pairs, repeatCount: lineRepeat };
 }
 function parseIsRepeatLine(line){
   line = line.trim();
@@ -1490,18 +1506,16 @@ function parseChordBody(text){
           if(!beatLine || parseIsNumeral(beatLine) || parseSectionHeader(beatLine)) break;
           if(/^\d+x$/i.test(beatLine)) break;
           if(!parseIsBeatLine(beatLine) || !parseIsChordLine(chordLine)) break;
-          var beats = beatLine.match(/\d+/g) || [];
-          var chords = chordLine.split(/\s+-\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
-          var pairs = beats.map(function(b, idx){ return { beat: b, chord: chords[idx] || '' }; });
-          if(pairs.length === 0) pairs.push({ beat: '', chord: '' });
-          var lineRepeat = '';
+          var parsed = parseBeatChordLines(beatLine, chordLine);
+          if(!parsed) break;
+          var lineRepeat = parsed.repeatCount;
           i += 2;
-          if(i < lines.length && !lines[i].trim()) i++;
-          if(i < lines.length && /^\d+x$/i.test(lines[i].trim())){
+          if(!lineRepeat && i < lines.length && !lines[i].trim()) i++;
+          if(!lineRepeat && i < lines.length && /^\d+x$/i.test(lines[i].trim())){
             lineRepeat = lines[i].trim().replace(/x$/i, '');
             i++;
           }
-          sec.lines.push({ pairs: pairs, repeatCount: lineRepeat });
+          sec.lines.push({ pairs: parsed.pairs, repeatCount: lineRepeat });
           if(i < lines.length && !lines[i].trim()) i++;
         }
         if(i < lines.length && /^\d+x$/i.test(lines[i].trim())){

@@ -42,7 +42,26 @@ function isBeatLine(line) {
 }
 
 function isChordLine(line) {
-  return /[A-Ga-g]/.test(line) && (line.indexOf(' - ') !== -1 || /^[A-Za-z#b0-9\/]+$/.test(line.trim()));
+  var core = line.trim().replace(/\s+-\s+\d+x\s*$/i, '');
+  return /[A-Ga-g]/.test(core) && (core.indexOf(' - ') !== -1 || /^[A-Za-z#b0-9\/]+$/.test(core));
+}
+
+function parseBeatChordLines(beatLine, chordLine) {
+  var lineRepeat = '';
+  var chordPart = chordLine.trim();
+  var repeatMatch = chordPart.match(/\s+-\s+(\d+x)\s*$/i);
+  if (repeatMatch) {
+    lineRepeat = repeatMatch[1];
+    chordPart = chordPart.slice(0, repeatMatch.index);
+  }
+  var beats = beatLine.match(/\d+/g) || [];
+  var chords = chordPart.split(/\s+-\s+/).map(function (s) { return s.trim(); }).filter(Boolean);
+  if (beats.length !== chords.length || beats.length === 0) return null;
+  var pairs = [];
+  for (var i = 0; i < beats.length; i++) {
+    pairs.push({ beat: beats[i], chord: chords[i] });
+  }
+  return { pairs: pairs, repeat: lineRepeat };
 }
 
 function isRepeatLine(line) {
@@ -50,17 +69,6 @@ function isRepeatLine(line) {
   if (!line || isBeatLine(line)) return false;
   if (isNumeral(line)) return true;
   return /^([IVXLCivxlc]+(\s+\d+x)?)(\s*-\s*[IVXLCivxlc]+(\s+\d+x)?)*$/i.test(line);
-}
-
-function parsePairs(beatLine, chordLine) {
-  var beats = beatLine.match(/\d+/g) || [];
-  var chords = chordLine.split(/\s+-\s+/).map(function (s) { return s.trim(); }).filter(Boolean);
-  if (beats.length !== chords.length || beats.length === 0) return null;
-  var pairs = [];
-  for (var i = 0; i < beats.length; i++) {
-    pairs.push({ beat: beats[i], chord: chords[i] });
-  }
-  return pairs;
 }
 
 function renderRow(row) {
@@ -74,7 +82,7 @@ function renderRow(row) {
   });
   html += '</div>';
   if (repeat) {
-    html += '<span class="line-repeat">' + repeat + '</span>';
+    html += '<span class="line-repeat" title="Repeat this chord sequence">' + repeat + '</span>';
   }
   html += '</div>';
   return html;
@@ -114,18 +122,18 @@ function parseSong(text) {
           if (/^\d+x$/i.test(beatLine)) break;
           if (!isBeatLine(beatLine) || !isChordLine(chordLine)) break;
 
-          var pairs = parsePairs(beatLine, chordLine);
-          if (!pairs) return null;
+          var parsed = parseBeatChordLines(beatLine, chordLine);
+          if (!parsed) return null;
 
-          var lineRepeat = '';
+          var lineRepeat = parsed.repeat;
           i += 2;
-          if (i < lines.length && !lines[i].trim()) i++;
-          if (i < lines.length && /^\d+x$/i.test(lines[i].trim())) {
+          if (!lineRepeat && i < lines.length && !lines[i].trim()) i++;
+          if (!lineRepeat && i < lines.length && /^\d+x$/i.test(lines[i].trim())) {
             lineRepeat = lines[i].trim();
             i++;
           }
 
-          section.rows.push({ pairs: pairs, repeat: lineRepeat });
+          section.rows.push({ pairs: parsed.pairs, repeat: lineRepeat });
           if (i < lines.length && !lines[i].trim()) i++;
           continue;
         }
