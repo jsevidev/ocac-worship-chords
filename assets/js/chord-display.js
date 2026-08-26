@@ -34,7 +34,7 @@ function isBeatLine(line) {
 }
 
 function isChordLine(line) {
-  return /[A-Ga-g]/.test(line) && (line.indexOf(' - ') !== -1 || /^[A-Ga-g#b\d\/]+$/.test(line.trim()));
+  return /[A-Ga-g]/.test(line) && (line.indexOf(' - ') !== -1 || /^[A-Za-z#b0-9\/]+$/.test(line.trim()));
 }
 
 function isRepeatLine(line) {

@@ -374,6 +374,7 @@ permalink: /builder/
       <ul>
         <li><strong>Save draft</strong> &mdash; temporary backup in this browser while you transcribe. Won&rsquo;t appear on the site.</li>
         <li><strong>Save .md</strong> &mdash; the real song file for <strong>_songs/</strong>. Commit and push to publish on the site.</li>
+        <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>am/G</strong>, etc.).</li>
       </ul>
     </div>
     <p class="legend-ref">Sections: <strong>I</strong> Intro · <strong>II</strong> Verse · <strong>III</strong> Chorus · <strong>IV</strong> Bridge · <strong>V</strong> Outro</p>
@@ -649,7 +650,7 @@ function renderPairLine(i, j, line){
       </div>
       <div>
         <span class="lbl">Chord</span>
-        <input type="text" class="chord" data-role="chord" value="${escapeAttr(pair.chord)}" placeholder="e.g. G">
+        <input type="text" class="chord" data-role="chord" value="${escapeAttr(pair.chord)}" placeholder="e.g. G or C/G">
       </div>
       <button class="btn-danger btn-sm" data-role="remove-pair" title="Remove chord">&times;</button>
     `;
@@ -712,11 +713,20 @@ function formatNumeral(value, repeatOnly){
   return repeatOnly ? formatRepeatLine(value) : formatSectionNumeral(value);
 }
 
-function formatChord(value){
-  var s = (value || '').trim();
+function formatChordPart(part){
+  var s = (part || '').trim();
   if(!s) return '';
   if(/^[A-Ga-g]$/.test(s)) return s.toUpperCase();
   return s.toLowerCase();
+}
+
+function formatChord(value){
+  var s = (value || '').trim();
+  if(!s) return '';
+  if(s.indexOf('/') !== -1){
+    return s.split('/').map(formatChordPart).filter(Boolean).join('/');
+  }
+  return formatChordPart(s);
 }
 
 function slugify(title){
@@ -923,7 +933,7 @@ function parseFrontMatter(fm){
 function parseIsNumeral(line){ return /^[IVXLCivxlc]+$/.test(line.trim()); }
 function parseIsBeatLine(line){ return /^\d[\d\s]*$/.test(line.trim()); }
 function parseIsChordLine(line){
-  return /[A-Ga-g]/.test(line) && (line.indexOf(' - ') !== -1 || /^[A-Ga-g#b\d\/]+$/.test(line.trim()));
+  return /[A-Ga-g]/.test(line) && (line.indexOf(' - ') !== -1 || /^[A-Za-z#b0-9\/]+$/.test(line.trim()));
 }
 function parseIsRepeatLine(line){
   line = line.trim();
