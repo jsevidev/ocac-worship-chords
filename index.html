@@ -15,28 +15,47 @@ title: Song list
   <p class="legend-note">A numeral alone (no chords below) means replay that section.</p>
 </details>
 
-<div class="search-wrap">
-  <input type="text" id="search" placeholder="Search song title" autocomplete="off">
-</div>
-
-<div id="song-list">
-{% assign songs_sorted = site.songs | sort: "notebook" %}
-{% assign notebooks = songs_sorted | map: "notebook" | uniq | sort %}
-{% for nb in notebooks %}
-  <div class="notebook-group">
-    <h2 class="notebook-heading">Notebook {{ nb }}</h2>
-    {% assign nb_songs = songs_sorted | where: "notebook", nb | sort: "title" %}
-    <ul class="song-index">
-      {% for song in nb_songs %}
-      <li class="song-row" data-title="{{ song.title | downcase }}">
-        <a href="{{ song.url | relative_url }}">{{ song.title }}</a>
-        <span class="page-num">p. {{ song.page }}</span>
-      </li>
-      {% endfor %}
-    </ul>
+<div class="list-controls">
+  <div class="search-wrap">
+    <input type="text" id="search" placeholder="Search song title" autocomplete="off">
   </div>
-{% endfor %}
+  <div class="filter-row">
+    <div class="filter-field">
+      <label for="sort-by">Sort</label>
+      <select id="sort-by">
+        <option value="alpha">A → Z</option>
+        <option value="notebook">By notebook</option>
+      </select>
+    </div>
+    <div class="filter-field">
+      <label for="filter-notebook">Notebook</label>
+      <select id="filter-notebook">
+        <option value="all">All notebooks</option>
+      </select>
+    </div>
+  </div>
 </div>
-<p id="no-results" style="display:none;">No songs match your search.</p>
 
-<script src="{{ '/assets/js/search.js' | relative_url }}"></script>
+<div id="song-list" class="song-list"></div>
+
+<p id="list-meta" class="list-meta" hidden></p>
+<nav id="pagination" class="pagination" aria-label="Song list pages" hidden>
+  <button type="button" class="page-btn" id="page-prev" disabled>Previous</button>
+  <span class="page-info" id="page-info">Page 1 of 1</span>
+  <button type="button" class="page-btn" id="page-next" disabled>Next</button>
+</nav>
+<p id="no-results" hidden>No songs match your search.</p>
+
+<script id="song-data" type="application/json">
+[
+{% for song in site.songs %}
+  {
+    "title": {{ song.title | jsonify }},
+    "url": {{ song.url | relative_url | jsonify }},
+    "notebook": {{ song.notebook | jsonify }},
+    "page": {{ song.page | jsonify }}
+  }{% unless forloop.last %},{% endunless %}
+{% endfor %}
+]
+</script>
+<script src="{{ '/assets/js/song-list.js' | relative_url }}?v=1"></script>
