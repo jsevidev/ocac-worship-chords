@@ -4,7 +4,7 @@ notebook: 0
 page: 00
 ---
 ```
-INTRO 2x
+Intro 2x
 8      8      8      8
 C  -  G/B  -  Am  -  F
 
