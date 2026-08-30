@@ -1,64 +1,61 @@
 # OCAC Worship Chords
 
-Free, online, searchable version of the church chord notebooks. Built with Jekyll,
-hosted free on GitHub Pages.
+Free, online, searchable chord sheets from the worship notebooks. Built with Jekyll,
+hosted on GitHub Pages.
 
-**Live site:** https://jsevidev.github.io/ocac-worship-chords/
+**Live site:** https://jsevidev.github.io/ocac-worship-chords/  
 **Repo:** https://github.com/jsevidev/ocac-worship-chords
 
-## Folder structure
+## Project layout
 
 ```
 OCAC Chord Sheet/
-├── builder/                  transcription tool (live at /builder/)
-│   └── index.html
-├── _config.yml               site settings
-├── _layouts/                 page templates
-├── _songs/                   one .md file per song
-├── assets/                   styling and search script
-├── index.html                homepage / song list
-└── docs/                     project notes (not deployed)
+├── _config.yml              Site settings and GitHub publish config
+├── _layouts/                Jekyll templates (default, song)
+├── _songs/                    One .md file per song (site content)
+├── assets/
+│   ├── css/style.css          Public site styles
+│   ├── images/logo.jpg        Site logo and favicon
+│   └── js/
+│       ├── chord-display.js   Renders chord blocks on song pages
+│       ├── fit-screen.js      Fit-to-screen scaling on song pages
+│       ├── song-list.js       Homepage search and pagination
+│       └── theme.js           Dark / light mode toggle
+├── builder/
+│   └── index.html             Chord sheet builder (live at /builder/)
+├── docs/                      Project notes (excluded from the site build)
+└── index.html                 Homepage / song list
 ```
 
 ## First-time setup
 
-1. Create a new GitHub repo and push everything in this folder to it.
-2. In the repo, go to Settings > Pages > set Source to "Deploy from a branch",
-   branch = main, folder = / (root).
-3. Wait a minute or two. Your site will be live at
-   `https://<your-username>.github.io/<repo-name>/`.
+1. Push this folder to a GitHub repo.
+2. In the repo: **Settings → Pages → Deploy from branch**, branch `main`, folder `/ (root)`.
+3. After a minute or two the site is live at `https://<username>.github.io/<repo-name>/`.
 
-The `docs/` folder is excluded from the site build.
+The `docs/` folder is excluded from the Jekyll build (see `_config.yml`).
 
 ## Adding a new song
 
-1. Open the [Chord Sheet Builder](https://jsevidev.github.io/ocac-worship-chords/builder/) (also linked at the bottom of the homepage).
-2. Fill in the song and click **Download .md**.
-3. Drop that file into `_songs/`.
-4. Commit and push. The live site updates automatically within about a minute.
+1. Open the [Chord Sheet Builder](https://jsevidev.github.io/ocac-worship-chords/builder/) (also linked in the site footer).
+2. Fill in the song. Use **Copy line** / **Paste line** to duplicate repetitive chord rows quickly.
+3. Click **Save .md** (links your `_songs` folder once, then saves there automatically) or download the file manually.
+4. Commit and push. The live site updates within about a minute.
 
-You can also add a song directly on GitHub: open `_songs`, click "Add file",
-paste in the same format as `amazing-grace.md`, and commit.
+You can also add a song on GitHub: create a file in `_songs/` using the same format as `amazing-grace.md`.
 
-## Section numerals
+## Section labels
 
-Roman numerals are consistent across all songs:
+Section labels are whatever you type in the builder (**Numeral** field): roman numerals (`I`, `II`), names (`Intro`, `Verse 1`), or anything else. The site displays your labels as entered — there is no fixed Intro/Verse legend.
 
-| Numeral | Section |
-|---------|---------|
-| I | Intro |
-| II | Verse |
-| III | Chorus |
-| IV | Bridge |
-| V | Outro |
+A label alone on its own line (no beat/chord rows under it) means replay that section.
 
-A numeral alone (no chord lines under it) means replay that section.
+## Song file format
 
-Edit the legend in `_config.yml` under `section_legend` if labels ever change.
+Every song is one markdown file in `_songs/`. Front matter requires `title`, `notebook`, and `page`. The chord content lives inside a triple-backtick code block and is rendered by `chord-display.js`. See `_songs/amazing-grace.md` for a full example.
 
-## File format
+## Features
 
-Every song is one file in `_songs`, named anything ending in `.md`. The three
-fields up top (title, notebook, page) are required. Everything inside the
-triple-backtick block is displayed exactly as written, so beat/chord alignment
-is preserved.
+- **Fit to screen** — song pages default to showing the whole chart on one screen (toggle **Scroll mode** to scroll normally).
+- **Dark mode** — persisted in the browser.
+- **Builder** — drafts in localStorage, optional `_songs` folder link, GitHub publish flow.

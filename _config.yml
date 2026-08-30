@@ -15,14 +15,6 @@ defaults:
     values:
       layout: song
 
-# Roman numeral section labels (consistent across all songs)
-section_legend:
-  - { numeral: "I", name: "Intro" }
-  - { numeral: "II", name: "Verse" }
-  - { numeral: "III", name: "Chorus" }
-  - { numeral: "IV", name: "Bridge" }
-  - { numeral: "V", name: "Outro" }
-
 # GitHub publish settings (used by the builder)
 publish:
   owner: jsevidev

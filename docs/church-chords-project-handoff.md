@@ -17,9 +17,8 @@ songs going forward. Zero ongoing cost — no hosting fees, no paid tools.
   that section again."
 - Handwriting in the notebooks isn't consistent enough for OCR to be
   reliable, so **transcription is manual**, not scanned/automated.
-- Open question, not yet resolved: whether section labels (I = Intro,
-  II = Verse, etc.) mean the same thing in every song, or vary song to song.
-  Worth confirming before assuming a fixed legend anywhere on the site.
+- Open question, resolved: section labels are **per-song** — whatever the transcriber
+  types (I, Intro, Verse 1, etc.). The site shows labels as-is; no global legend.
 
 ## Architecture: two separate things
 
@@ -40,8 +39,7 @@ repo.
 
 ## 1. The builder tool
 
-Delivered as a standalone HTML file: **`chord-sheet-builder.html`**
-(already generated in this conversation — carry that file over as-is).
+Delivered as **`builder/index.html`** (Jekyll permalink `/builder/`).
 
 What it does:
 - Fill-in-the-blanks form: song title, notebook #, page #, then add

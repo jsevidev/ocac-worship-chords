@@ -96,18 +96,6 @@ body{
   flex-shrink: 0;
   box-shadow: var(--shadow-sm);
 }
-.site-mark{
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: var(--brass-soft);
-  color: var(--brass);
-  font-size: 16px;
-  font-weight: 700;
-}
 .site-title{
   font-family: var(--font-serif);
   font-weight: 700;
@@ -169,59 +157,6 @@ main{
   max-width: 420px;
   margin-left: auto;
   margin-right: auto;
-}
-
-/* ---- Section legend ---- */
-.section-legend{
-  margin-bottom: 16px;
-  padding: 12px 16px;
-}
-.section-legend summary{
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  text-transform: uppercase;
-  letter-spacing: .06em;
-  list-style: none;
-}
-.section-legend summary::-webkit-details-marker{ display: none; }
-.section-legend summary::after{
-  content: '+';
-  float: right;
-  color: var(--brass);
-  font-size: 16px;
-  line-height: 1;
-}
-.section-legend[open] summary::after{ content: '−'; }
-.legend-list{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 14px 0 10px;
-}
-.legend-item{
-  display: flex;
-  gap: 8px;
-  align-items: baseline;
-  font-size: 13px;
-  padding: 6px 12px;
-  background: var(--surface-alt);
-  border-radius: 999px;
-  border: 1px solid var(--paper-rule);
-}
-.legend-item dt{
-  font-family: var(--font-serif);
-  font-weight: 700;
-  margin: 0;
-  color: var(--brass);
-}
-.legend-item dd{ margin: 0; color: var(--ink-soft); }
-.legend-note{
-  margin: 0;
-  font-size: 12px;
-  color: var(--ink-soft);
-  font-style: italic;
 }
 
 /* ---- List controls ---- */
@@ -464,24 +399,6 @@ main{
   border-color: var(--paper-rule);
   text-transform: none;
   font-weight: 500;
-}
-.legend-chips{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-.chip{
-  font-size: 11px;
-  color: var(--ink-soft);
-  padding: 4px 10px;
-  background: var(--surface);
-  border: 1px solid var(--paper-rule);
-  border-radius: 999px;
-}
-.chip strong{
-  font-family: var(--font-serif);
-  color: var(--brass);
-  font-weight: 700;
 }
 
 /* ---- Chord sheet ---- */

@@ -6,3 +6,5 @@ Gemfile.lock
 *.gem
 .DS_Store
 Thumbs.db
+Logo.jpg
+/chord-sheet-builder.html
