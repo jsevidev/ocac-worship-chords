@@ -18,6 +18,7 @@ permalink: /builder/
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="icon" href="{{ '/assets/images/logo.jpg' | relative_url }}" type="image/jpeg">
 <link href="https://fonts.googleapis.com/css2?family=Lora:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
@@ -70,6 +71,22 @@ permalink: /builder/
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 24px;
+  }
+  .top-bar-brand{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    color: var(--ink);
+    font-family: 'Lora', serif;
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .top-bar-brand img{
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    object-fit: cover;
   }
   .back-link{
     font-size: 14px;
@@ -452,6 +469,13 @@ permalink: /builder/
   .checkbox-row input{ width:auto; }
 
   .pair-line{ display:flex; flex-wrap: wrap; gap: 8px; align-items: flex-end; margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed var(--paper-rule); }
+  .pair-line-tools{
+    display: flex;
+    gap: 6px;
+    width: 100%;
+    margin-bottom: 2px;
+  }
+  .pair-line-tools .btn-ghost{ font-size: 11px; padding: 3px 8px; }
   .pair{ display:flex; gap:4px; align-items:flex-end; }
   .pair input{ width: 56px; text-align:center; }
   .pair input.chord{ width: 68px; font-weight:600; }
@@ -673,7 +697,10 @@ permalink: /builder/
 <body>
 <div class="wrap">
   <div class="top-bar">
-    <a href="{{ '/' | relative_url }}" class="back-link">&larr; All songs</a>
+    <a href="{{ '/' | relative_url }}" class="top-bar-brand">
+      <img src="{{ '/assets/images/logo.jpg' | relative_url }}" alt="">
+      OCAC Worship Chords
+    </a>
     <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Switch to dark mode">Dark mode</button>
   </div>
   <header>
@@ -688,6 +715,7 @@ permalink: /builder/
         <li><strong>Line repeat</strong> &mdash; use <strong>Repeat</strong> on a chord line to play that sequence again (e.g. E-A three times saves as <strong>E - A - 3x</strong>, then continue with the next line).</li>
         <li><strong>Repeat line</strong> &mdash; check <strong>Repeat instruction only</strong>, then add sections one by one (like chords). Optional <strong>Repeat</strong> on each (e.g. I + 2x → <strong>I (2x) - II</strong>).</li>
         <li><strong>Slash chords</strong> &mdash; use <strong>C/G</strong> for chord-over-chord (formats as <strong>C/G</strong>, <strong>Am/G</strong>, etc.).</li>
+        <li><strong>Copy / paste line</strong> &mdash; use <strong>Copy line</strong> on a row, then <strong>Paste line</strong> on another to duplicate beats and chords quickly.</li>
       </ul>
     </div>
     <p class="legend-ref">Section labels are whatever you type in <strong>Numeral</strong> &mdash; roman (I, II) or a name (Verse 1, Intro). The site shows your labels as-is.</p>
@@ -1701,6 +1729,35 @@ function renderPairLine(i, j, lineObj){
   const line = lineObj.pairs;
   const lineEl = document.createElement('div');
   lineEl.className = 'pair-line';
+  lineEl.tabIndex = 0;
+  lineEl.title = 'Click here and Ctrl+V to paste a chord line';
+
+  var tools = document.createElement('div');
+  tools.className = 'pair-line-tools';
+  var copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'btn-ghost btn-sm';
+  copyBtn.textContent = 'Copy line';
+  copyBtn.addEventListener('click', function(){ copyLineToClipboard(lineObj); });
+  var pasteBtn = document.createElement('button');
+  pasteBtn.type = 'button';
+  pasteBtn.className = 'btn-ghost btn-sm';
+  pasteBtn.textContent = 'Paste line';
+  pasteBtn.addEventListener('click', function(){ pasteLineFromClipboard(lineObj); });
+  tools.appendChild(copyBtn);
+  tools.appendChild(pasteBtn);
+  lineEl.appendChild(tools);
+
+  lineEl.addEventListener('paste', function(e){
+    var text = (e.clipboardData || window.clipboardData).getData('text');
+    var parsed = parsePastedLineText(text);
+    if(!parsed) return;
+    e.preventDefault();
+    applyParsedLine(lineObj, parsed);
+    renderSections();
+    renderPreview();
+    showToast('Line pasted', 'success');
+  });
 
   line.forEach((pair, k)=>{
     const pairEl = document.createElement('div');
@@ -2140,9 +2197,94 @@ function parseBeatChordLines(beatLine, chordLine){
   var beats = beatLine.match(/\d+/g) || [];
   var chords = chordPart.split(/\s+-\s+/).map(function(s){ return s.trim(); }).filter(Boolean);
   if(beats.length !== chords.length || beats.length === 0) return null;
-  var pairs = beats.map(function(b, idx){ return { beat: b, chord: chords[idx] || '' }; });
+  var pairs = beats.map(function(b, idx){
+    return { beat: b, chord: formatChordFinal(chords[idx] || '') };
+  });
   return { pairs: pairs, repeatCount: lineRepeat };
 }
+
+function copyLineText(lineObj){
+  lineObj = normalizeLine(lineObj);
+  var aligned = alignLine(lineObj.pairs, lineObj.repeatCount);
+  if(!aligned) return '';
+  return aligned.beats + '\n' + aligned.chords;
+}
+
+function parsePastedLineText(text){
+  text = (text || '').trim();
+  if(!text) return null;
+
+  var lines = text.split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+  if(!lines.length) return null;
+
+  for(var i = 0; i < lines.length - 1; i++){
+    if(parseIsBeatLine(lines[i]) && parseIsChordLine(lines[i + 1])){
+      return parseBeatChordLines(lines[i], lines[i + 1]);
+    }
+  }
+
+  var chordLine = lines.length === 1 ? lines[0] : lines.find(parseIsChordLine);
+  if(!chordLine || !parseIsChordLine(chordLine)) return null;
+
+  var repeatCount = '';
+  var chordPart = chordLine.trim();
+  var repeatMatch = chordPart.match(/\s+-\s+(\d+x)\s*$/i);
+  if(repeatMatch){
+    repeatCount = repeatMatch[1].replace(/x$/i, '');
+    chordPart = chordPart.slice(0, repeatMatch.index);
+  }
+  var chords = chordPart.split(/\s+-\s+/).map(function(s){
+    return formatChordFinal(s.trim());
+  }).filter(Boolean);
+  if(!chords.length) return null;
+
+  return {
+    pairs: chords.map(function(c){ return { beat: '4', chord: c }; }),
+    repeatCount: repeatCount
+  };
+}
+
+function applyParsedLine(lineObj, parsed){
+  if(!parsed || !parsed.pairs || !parsed.pairs.length) return false;
+  lineObj.pairs = parsed.pairs.map(function(p){
+    return { beat: p.beat || '4', chord: p.chord || '' };
+  });
+  lineObj.repeatCount = parsed.repeatCount || '';
+  return true;
+}
+
+async function copyLineToClipboard(lineObj){
+  var text = copyLineText(lineObj);
+  if(!text){
+    flashStatus('Nothing to copy on this line', 'error');
+    return;
+  }
+  try{
+    await navigator.clipboard.writeText(text);
+    showToast('Line copied', 'success');
+  }catch(e){
+    flashStatus('Copy failed — select and copy manually', 'error');
+  }
+}
+
+async function pasteLineFromClipboard(lineObj){
+  var text = '';
+  try{
+    text = await navigator.clipboard.readText();
+  }catch(e){
+    text = window.prompt('Paste beats and chords (two lines, or one chord line):', '') || '';
+  }
+  var parsed = parsePastedLineText(text);
+  if(!parsed){
+    flashStatus('Could not read that paste — use beats + chords or C - Am - G', 'error');
+    return;
+  }
+  applyParsedLine(lineObj, parsed);
+  renderSections();
+  renderPreview();
+  showToast('Line pasted', 'success');
+}
+
 function parseIsRepeatPart(part){
   part = (part || '').trim();
   if(!part) return false;
