@@ -25,7 +25,7 @@ II
 8      8      8      8
 C  -  G/B  -  Am  -  F
 
-8      8      8      8
+8      8      8      8      8
 C  -  G/B  -  Am  -  F  -  C
 
 INTRO

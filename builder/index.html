@@ -2295,9 +2295,10 @@ function parseIsRepeatPart(part){
 function parseIsRepeatLine(line){
   line = line.trim();
   if(!line || parseIsBeatLine(line)) return false;
-  if(parseIsNumeral(line)) return true;
   if(parseSectionHeader(line)) return false;
-  if(line.indexOf(' - ') === -1) return false;
+  if(line.indexOf(' - ') === -1){
+    return parseIsNumeral(line) || /^[A-Za-z][A-Za-z0-9\s'-]*$/i.test(line);
+  }
   var parts = line.split(/\s*-\s*/);
   return parts.length >= 2 && parts.every(parseIsRepeatPart);
 }

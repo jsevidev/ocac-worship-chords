@@ -85,9 +85,10 @@ function isRepeatPart(part) {
 function isRepeatLine(line) {
   line = line.trim();
   if (!line || isBeatLine(line)) return false;
-  if (isNumeral(line)) return true;
   if (parseSectionHeader(line)) return false;
-  if (line.indexOf(' - ') === -1) return false;
+  if (line.indexOf(' - ') === -1) {
+    return isNumeral(line) || /^[A-Za-z][A-Za-z0-9\s'-]*$/i.test(line);
+  }
   var parts = line.split(/\s*-\s*/);
   return parts.length >= 2 && parts.every(isRepeatPart);
 }
@@ -145,7 +146,7 @@ function parseSong(text) {
           if (!isChordLine(chordLine)) break;
 
           var parsed = parseBeatChordLines(beatLine, chordLine);
-          if (!parsed) return null;
+          if (!parsed) break;
 
           var lineRepeat = parsed.repeat;
           i += 2;
